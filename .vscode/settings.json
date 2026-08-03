@@ -1,4 +1,4 @@
 {
-    "vscord.app.privacyMode.enable": true,
+    "vscord.app.privacyMode.enable": false,
     "vscord.enable": true
 }

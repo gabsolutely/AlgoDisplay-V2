@@ -63,6 +63,8 @@
                             <option value="heap">Heap Sort</option>
                             <option value="shell">Shell Sort</option>
                             <option value="cocktail">Cocktail Shaker</option>
+                            <option value="counting">Counting Sort</option>
+                            <option value="radix">Radix Sort (LSD)</option>
                         </select>
                     </div>
                     <div class="control-group">
@@ -73,7 +75,20 @@
                             <option value="reversed">Reversed</option>
                             <option value="few-unique">Few Unique</option>
                             <option value="all-same">All Same</option>
+                            <option value="custom">Custom Array…</option>
                         </select>
+                    </div>
+                    <div class="control-group nearly-sorted-only" style="display:none;">
+                        <label for="nearly-swaps">Swaps %: <span id="nearly-swaps-val">30%</span></label>
+                        <input type="range" id="nearly-swaps" min="3" max="60" value="30" style="width:140px;">
+                    </div>
+                    <div class="control-group nearly-sorted-only" style="display:none;">
+                        <label for="nearly-spread">Spread %: <span id="nearly-spread-val">25%</span></label>
+                        <input type="range" id="nearly-spread" min="5" max="50" value="25" style="width:140px;">
+                    </div>
+                    <div class="control-group custom-only" style="display:none;">
+                        <label for="custom-array">Custom Array (comma-separated):</label>
+                        <textarea id="custom-array" class="btn" style="width:100%;min-height:52px;resize:vertical;" placeholder="e.g. 5, 3, 8, 1, 9, 2, 7, 4"></textarea>
                     </div>
                     <div class="control-group">
                         <label for="array-size">Array Size:</label>
@@ -101,8 +116,30 @@
                         <label for="musical-toggle" class="toggle-label">
                             <input type="checkbox" id="musical-toggle">
                             <span class="toggle-slider"></span>
-                            🎵 Musical
+                            Musical
                         </label>
+                    </div>
+                    <div class="control-group">
+                        <label for="race-toggle" class="toggle-label">
+                            <input type="checkbox" id="race-toggle">
+                            <span class="toggle-slider"></span>
+                            Race Mode
+                        </label>
+                    </div>
+                    <div class="control-group race-only" style="display:none;">
+                        <label for="algorithm-select-b">Vs:</label>
+                        <select id="algorithm-select-b" class="btn btn-primary">
+                            <option value="bubble">Bubble Sort</option>
+                            <option value="selection">Selection Sort</option>
+                            <option value="insertion">Insertion Sort</option>
+                            <option value="merge">Merge Sort</option>
+                            <option value="quick">Quick Sort</option>
+                            <option value="heap">Heap Sort</option>
+                            <option value="shell">Shell Sort</option>
+                            <option value="cocktail">Cocktail Shaker</option>
+                            <option value="counting">Counting Sort</option>
+                            <option value="radix">Radix Sort (LSD)</option>
+                        </select>
                     </div>
                     <div class="control-group">
                         <label for="theme-toggle" class="toggle-label">
@@ -197,13 +234,22 @@ for (let i = 0; i < arr.length - 1; i++) {
                     <h2>Visualization</h2>
                     <div id="operation-info" class="operation-info"></div>
                 </div>
-                <div id="visualizer" class="visualizer"></div>
+                <div id="viz-wrapper" class="viz-wrapper">
+                    <div class="viz-side" id="viz-side-a">
+                        <div class="viz-label" id="viz-label-a">Algorithm A</div>
+                        <div id="visualizer" class="visualizer"></div>
+                    </div>
+                    <div class="viz-side viz-side-b" id="viz-side-b" style="display:none;">
+                        <div class="viz-label" id="viz-label-b">Algorithm B</div>
+                        <div id="visualizer-b" class="visualizer"></div>
+                    </div>
+                </div>
             </section>
 
             <section class="info-section">
-                <div class="info-grid">
-                    <div class="info-card">
-                        <h3>Statistics</h3>
+                <div class="info-grid" id="stats-grid">
+                    <div class="info-card" id="stats-card-a">
+                        <h3 id="stats-title-a">Statistics</h3>
                         <div id="stats" class="info-content">
                             <div><strong>Array Size:</strong> <span id="stat-size">0</span></div>
                             <div><strong>Comparisons:</strong> <span id="stat-comparisons">0</span></div>
@@ -212,7 +258,17 @@ for (let i = 0; i < arr.length - 1; i++) {
                             <div><strong>Time:</strong> <span id="stat-time">0ms</span></div>
                         </div>
                     </div>
-                    <div class="info-card">
+                    <div class="info-card info-card-b" id="stats-card-b" style="display:none;">
+                        <h3 id="stats-title-b">Vs Algorithm</h3>
+                        <div id="stats-b" class="info-content">
+                            <div><strong>Array Size:</strong> <span id="stat-size-b">0</span></div>
+                            <div><strong>Comparisons:</strong> <span id="stat-comparisons-b">0</span></div>
+                            <div><strong>Swaps:</strong> <span id="stat-swaps-b">0</span></div>
+                            <div><strong>Steps:</strong> <span id="stat-steps-b">0</span></div>
+                            <div><strong>Time:</strong> <span id="stat-time-b">0ms</span></div>
+                        </div>
+                    </div>
+                    <div class="info-card info-card-log" style="grid-column: 1 / -1;">
                         <h3>Execution Log</h3>
                         <div id="logs" class="info-content logs"></div>
                     </div>

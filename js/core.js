@@ -3,6 +3,8 @@ class AlgorithmVisualizer {
   constructor() {
     // Core state
     this.array = [];
+    this.arrayB = [];
+    this.raceMode = false;
     this.isRunning = false;
     this.isPaused = false;
     this.stepMode = false;
@@ -13,6 +15,7 @@ class AlgorithmVisualizer {
     this.currentLanguage = 'javascript';
     this.currentCategory = 'sort';
     this.currentAlgorithm = 'bubble';
+    this.currentAlgorithmB = 'insertion';
     this.searchTarget = null;
     this.stepResolve = null;
     this._generation = 0;
@@ -26,10 +29,25 @@ class AlgorithmVisualizer {
       startTime: 0,
       endTime: 0
     };
+    this.statsB = {
+      comparisons: 0,
+      swaps: 0,
+      steps: 0,
+      startTime: 0,
+      endTime: 0
+    };
     
     // DOM elements cache
     this.elements = {
       container: document.getElementById("visualizer"),
+      containerB: document.getElementById("visualizer-b"),
+      vizSideB: document.getElementById("viz-side-b"),
+      vizWrapper: document.getElementById("viz-wrapper"),
+      vizLabelA: document.getElementById("viz-label-a"),
+      vizLabelB: document.getElementById("viz-label-b"),
+      statsCardB: document.getElementById("stats-card-b"),
+      statsTitleA: document.getElementById("stats-title-a"),
+      statsTitleB: document.getElementById("stats-title-b"),
       logArea: document.getElementById("logs"),
       operationInfo: document.getElementById("operation-info"),
       generateBtn: document.getElementById("gen-btn"),
@@ -41,6 +59,8 @@ class AlgorithmVisualizer {
       categorySelect: document.getElementById("category-select"),
       languageSelect: document.getElementById("language-select"),
       algorithmSelect: document.getElementById("algorithm-select"),
+      algorithmSelectB: document.getElementById("algorithm-select-b"),
+      raceToggle: document.getElementById("race-toggle"),
       presetSelect: document.getElementById("preset-select"),
       arraySizeInput: document.getElementById("array-size"),
       targetInput: document.getElementById("target-input"),
@@ -58,9 +78,22 @@ class AlgorithmVisualizer {
       statSwaps: document.getElementById("stat-swaps"),
       statSteps: document.getElementById("stat-steps"),
       statTime: document.getElementById("stat-time"),
+      statSizeB: document.getElementById("stat-size-b"),
+      statComparisonsB: document.getElementById("stat-comparisons-b"),
+      statSwapsB: document.getElementById("stat-swaps-b"),
+      statStepsB: document.getElementById("stat-steps-b"),
+      statTimeB: document.getElementById("stat-time-b"),
       helpBtn: document.getElementById("help-btn"),
       helpPanel: document.getElementById("help-panel"),
-      searchOnlyGroups: Array.from(document.querySelectorAll(".search-only"))
+      searchOnlyGroups: Array.from(document.querySelectorAll(".search-only")),
+      nearlySortedGroups: Array.from(document.querySelectorAll(".nearly-sorted-only")),
+      customOnlyGroups: Array.from(document.querySelectorAll(".custom-only")),
+      raceOnlyGroups: Array.from(document.querySelectorAll(".race-only")),
+      customArrayInput: document.getElementById("custom-array"),
+      nearlySwapsSlider: document.getElementById("nearly-swaps"),
+      nearlySwapsVal: document.getElementById("nearly-swaps-val"),
+      nearlySpreadSlider: document.getElementById("nearly-spread"),
+      nearlySpreadVal: document.getElementById("nearly-spread-val"),
     };
     
     console.log("Elements found:", this.validateElements());
@@ -68,8 +101,15 @@ class AlgorithmVisualizer {
     // Initialize subsystems
     this.renderer = new ArrayRenderer();
     this.renderer.init(this.elements.container);
+    this.rendererB = new ArrayRenderer();
+    if (this.elements.containerB) {
+      this.rendererB.init(this.elements.containerB);
+    }
     this.sounds = new SoundManager();
+    this.sounds.setScale("pentatonic");
+    this.sounds.setWaveform("triangle");
     this.pythonRunner = new PythonRunner();
+    this.pythonRunnerB = new PythonRunner();
     
     this.init();
   }
@@ -149,6 +189,81 @@ class AlgorithmVisualizer {
       };
     }
 
+    if (this.elements.raceToggle) {
+      this.elements.raceToggle.onchange = () => {
+        this.raceMode = this.elements.raceToggle.checked;
+        if (this.elements.vizSideB) {
+          this.elements.vizSideB.style.display = this.raceMode ? "" : "none";
+        }
+        if (this.elements.vizWrapper) {
+          if (this.raceMode) this.elements.vizWrapper.classList.add("race-mode");
+          else this.elements.vizWrapper.classList.remove("race-mode");
+        }
+        if (this.elements.statsCardB) {
+          this.elements.statsCardB.style.display = this.raceMode ? "" : "none";
+        }
+        if (this.elements.raceOnlyGroups) {
+          this.elements.raceOnlyGroups.forEach(el => {
+            el.style.display = this.raceMode ? "" : "none";
+          });
+        }
+        if (this.raceMode && this.currentCategory !== "sort") {
+          this.currentCategory = "sort";
+          if (this.elements.categorySelect) this.elements.categorySelect.value = "sort";
+          this.refreshAlgorithmOptions();
+          this.setExampleCode();
+        }
+        this.generateArray();
+        this.log("Race mode: " + (this.raceMode ? "ON" : "OFF"));
+      };
+    }
+
+    if (this.elements.algorithmSelectB) {
+      this.elements.algorithmSelectB.onchange = () => {
+        this.currentAlgorithmB = this.elements.algorithmSelectB.value;
+      };
+    }
+
+    if (this.elements.presetSelect) {
+      this.elements.presetSelect.onchange = () => {
+        const preset = this.elements.presetSelect.value;
+        if (this.elements.nearlySortedGroups) {
+          const showNearly = preset === "nearly-sorted";
+          this.elements.nearlySortedGroups.forEach(el => {
+            el.style.display = showNearly ? "" : "none";
+          });
+        }
+        if (this.elements.customOnlyGroups) {
+          const showCustom = preset === "custom";
+          this.elements.customOnlyGroups.forEach(el => {
+            el.style.display = showCustom ? "" : "none";
+          });
+        }
+      };
+    }
+
+    if (this.elements.nearlySwapsSlider) {
+      const updateSwapsLabel = () => {
+        if (this.elements.nearlySwapsVal) {
+          this.elements.nearlySwapsVal.textContent = this.elements.nearlySwapsSlider.value + "%";
+        }
+      };
+      this.elements.nearlySwapsSlider.addEventListener('input', updateSwapsLabel);
+      this.elements.nearlySwapsSlider.addEventListener('change', updateSwapsLabel);
+      updateSwapsLabel();
+    }
+
+    if (this.elements.nearlySpreadSlider) {
+      const updateSpreadLabel = () => {
+        if (this.elements.nearlySpreadVal) {
+          this.elements.nearlySpreadVal.textContent = this.elements.nearlySpreadSlider.value + "%";
+        }
+      };
+      this.elements.nearlySpreadSlider.addEventListener('input', updateSpreadLabel);
+      this.elements.nearlySpreadSlider.addEventListener('change', updateSpreadLabel);
+      updateSpreadLabel();
+    }
+
     if (this.elements.themeToggle) {
       this.elements.themeToggle.onchange = (e) => {
         if (e.target.checked) {
@@ -208,6 +323,8 @@ class AlgorithmVisualizer {
         ["heap", "Heap Sort"],
         ["shell", "Shell Sort"],
         ["cocktail", "Cocktail Shaker"],
+        ["counting", "Counting Sort"],
+        ["radix", "Radix Sort (LSD)"],
       ],
       search: [
         ["linear", "Linear Search"],
@@ -365,6 +482,50 @@ while (swapped) {
     if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; }
   }
   start++;
+}`,
+          counting: `// Counting Sort O(n + k) — non-comparison integer sort
+if (arr.length <= 1) return;
+const min = Math.min(...arr), max = Math.max(...arr);
+const range = max - min + 1;
+const count = new Array(range).fill(0);
+log("Range " + min + " → " + max + "  |  buckets = " + range);
+for (let i = 0; i < arr.length; i++) {
+  await compare(i, i);
+  count[arr[i] - min]++;
+}
+// Render bucket phase as a visual "swap-free" pass
+const out = new Array(arr.length);
+let idx = 0;
+for (let b = 0; b < range; b++) {
+  while (count[b] > 0) {
+    out[idx] = min + b;
+    count[b]--;
+    idx++;
+    if (idx < arr.length) await compare(idx, idx);
+  }
+}
+for (let i = 0; i < arr.length; i++) arr[i] = out[i];
+await renderArray(arr);`,
+          radix: `// Radix Sort (LSD) — repeated Counting Sort by digit
+const countingByDigit = async (arr, n, exp) => {
+  const out = new Array(n).fill(0);
+  const count = new Array(10).fill(0);
+  for (let i = 0; i < n; i++) count[Math.floor(arr[i] / exp) % 10]++;
+  for (let i = 1; i < 10; i++) count[i] += count[i - 1];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = Math.floor(arr[i] / exp) % 10;
+    out[count[d] - 1] = arr[i];
+    count[d]--;
+    await compare(i, i);
+  }
+  for (let i = 0; i < n; i++) arr[i] = out[i];
+  await renderArray(arr);
+};
+const n = arr.length;
+const m = Math.max(...arr);
+for (let exp = 1; Math.floor(m / exp) > 0; exp *= 10) {
+  log("Sorting digit " + exp);
+  await countingByDigit(arr, n, exp);
 }`,
         },
         search: {
@@ -590,6 +751,55 @@ async def sort(arr):
                 await swap(arr, i, i + 1)
                 swapped = True
         start += 1`,
+          counting: `# Counting Sort O(n + k) — non-comparison integer sort
+async def sort(arr):
+    if len(arr) <= 1:
+        return
+    mn = min(arr)
+    mx = max(arr)
+    rng = mx - mn + 1
+    count = [0] * rng
+    log("Range " + str(mn) + " -> " + str(mx) + "  |  buckets = " + str(rng))
+    for i in range(len(arr)):
+        await compare(i, i)
+        count[arr[i] - mn] += 1
+    out = [0] * len(arr)
+    idx = 0
+    for b in range(rng):
+        while count[b] > 0:
+            out[idx] = mn + b
+            count[b] -= 1
+            idx += 1
+            if idx < len(arr):
+                await compare(idx, idx)
+    for i in range(len(arr)):
+        arr[i] = out[i]
+    await render_array(arr)`,
+          radix: `# Radix Sort (LSD) — Counting Sort per digit
+async def _counting_by_digit(arr, n, exp):
+    out = [0] * n
+    count = [0] * 10
+    for i in range(n):
+        count[(arr[i] // exp) % 10] += 1
+    for i in range(1, 10):
+        count[i] += count[i - 1]
+    for i in range(n - 1, -1, -1):
+        d = (arr[i] // exp) % 10
+        out[count[d] - 1] = arr[i]
+        count[d] -= 1
+        await compare(i, i)
+    for i in range(n):
+        arr[i] = out[i]
+    await render_array(arr)
+
+async def sort(arr):
+    n = len(arr)
+    m = max(arr)
+    exp = 1
+    while m // exp > 0:
+        log("Sorting digit " + str(exp))
+        await _counting_by_digit(arr, n, exp)
+        exp *= 10`,
         },
         search: {
           linear: `# Linear Search
@@ -719,15 +929,17 @@ async def search(arr, target):
     this.elements.editor.value = t || fallback;
   }
   
-  generatePreset(size, preset) {
+  generatePreset(size, preset, options = {}) {
     const base = () => Math.floor(Math.random() * 180) + 30;
     switch (preset) {
       case "nearly-sorted": {
+        const swapPct = options.swapPct != null ? options.swapPct / 100 : 0.3;
+        const spreadPct = options.spreadPct != null ? options.spreadPct / 100 : 0.25;
         const arr = Array.from({ length: size }, (_, i) => i * 4 + 20);
-        const swaps = Math.max(3, Math.floor(size * 0.3));
+        const swaps = Math.max(3, Math.floor(size * swapPct));
         for (let k = 0; k < swaps; k++) {
           const a = Math.floor(Math.random() * size);
-          const spread = Math.max(6, Math.floor(size * 0.25));
+          const spread = Math.max(2, Math.floor(size * spreadPct));
           const offset = Math.floor(Math.random() * (spread * 2 + 1)) - spread;
           const b = Math.max(0, Math.min(size - 1, a + offset));
           [arr[a], arr[b]] = [arr[b], arr[a]];
@@ -747,6 +959,14 @@ async def search(arr, target):
       default:
         return Array.from({ length: size }, () => base());
     }
+  }
+
+  parseCustomArray(text) {
+    if (!text || !text.trim()) return null;
+    const parts = text.split(/[\s,;]+/).filter(s => s.length > 0);
+    const nums = parts.map(p => Number(p)).filter(n => !isNaN(n) && isFinite(n));
+    if (nums.length === 0) return null;
+    return nums.map(n => Math.max(1, Math.min(500, Math.round(n))));
   }
 
   generateArray() {
@@ -776,7 +996,31 @@ async def search(arr, target):
     this.elements.stepBtn.textContent = "Step Mode";
     this.elements.actionControls.innerHTML = "";
 
-    this.array = this.generatePreset(size, preset);
+    if (preset === "custom" && this.elements.customArrayInput) {
+      const parsed = this.parseCustomArray(this.elements.customArrayInput.value);
+      if (parsed && parsed.length > 0) {
+        this.array = parsed;
+        if (this.elements.arraySizeInput) {
+          this.elements.arraySizeInput.value = parsed.length;
+        }
+      } else {
+        this.log("⚠️ Custom array empty or invalid — falling back to random");
+        this.array = this.generatePreset(size, "random");
+      }
+    } else {
+      const opts = {};
+      if (preset === "nearly-sorted") {
+        if (this.elements.nearlySwapsSlider) {
+          const v = parseInt(this.elements.nearlySwapsSlider.value);
+          if (!isNaN(v)) opts.swapPct = v;
+        }
+        if (this.elements.nearlySpreadSlider) {
+          const v = parseInt(this.elements.nearlySpreadSlider.value);
+          if (!isNaN(v)) opts.spreadPct = v;
+        }
+      }
+      this.array = this.generatePreset(size, preset, opts);
+    }
 
     if (this.currentCategory === "search") {
       const shouldPreSort = this.elements.searchSortToggle ? this.elements.searchSortToggle.checked : true;
@@ -798,8 +1042,35 @@ async def search(arr, target):
     this.elements.container.innerHTML = '';
     this.renderer.render(this.array, this._generation);
 
+    if (this.raceMode) {
+      this.arrayB = [...this.array];
+      if (this.rendererB && this.elements.containerB) {
+        this.rendererB.sortedIndices.clear();
+        this.rendererB.foundIndices.clear();
+        this.elements.containerB.innerHTML = '';
+        this.rendererB.render(this.arrayB, this._generation);
+      }
+    }
+
+    if (this.raceMode) {
+      const algoOpts = this.elements.algorithmSelect.options;
+      const algoNameA = algoOpts[this.elements.algorithmSelect.selectedIndex]?.textContent || this.currentAlgorithm;
+      if (this.elements.vizLabelA) this.elements.vizLabelA.textContent = "A: " + algoNameA;
+      if (this.elements.statsTitleA) this.elements.statsTitleA.textContent = algoNameA;
+      if (this.elements.algorithmSelectB) {
+        const algoNameB = this.elements.algorithmSelectB.options[this.elements.algorithmSelectB.selectedIndex]?.textContent || this.currentAlgorithmB;
+        if (this.elements.vizLabelB) this.elements.vizLabelB.textContent = "B: " + algoNameB;
+        if (this.elements.statsTitleB) this.elements.statsTitleB.textContent = algoNameB;
+      }
+    } else {
+      if (this.elements.vizLabelA) this.elements.vizLabelA.textContent = "Visualization";
+      if (this.elements.statsTitleA) this.elements.statsTitleA.textContent = "Statistics";
+    }
+
     this.updateStats();
-    this.log(`Generated array of size ${size} (preset: ${preset})`);
+    const extra = preset === "nearly-sorted" ?
+      ` (swaps=${this.elements.nearlySwapsSlider?.value ?? 30}%, spread=${this.elements.nearlySpreadSlider?.value ?? 25}%)` : "";
+    this.log(`Generated array of size ${this.array.length} (preset: ${preset})${extra}`);
     this.sounds.play('generate');
   }
   
@@ -812,6 +1083,17 @@ async def search(arr, target):
     if (this.stats.endTime > 0) {
       const elapsed = this.stats.endTime - this.stats.startTime;
       this.elements.statTime.textContent = elapsed + "ms";
+    }
+
+    if (this.raceMode && this.elements.statSizeB) {
+      this.elements.statSizeB.textContent = this.arrayB.length;
+      this.elements.statComparisonsB.textContent = this.statsB.comparisons;
+      this.elements.statSwapsB.textContent = this.statsB.swaps;
+      this.elements.statStepsB.textContent = this.statsB.steps;
+      if (this.statsB.endTime > 0) {
+        const elapsed = this.statsB.endTime - this.statsB.startTime;
+        this.elements.statTimeB.textContent = elapsed + "ms";
+      }
     }
   }
   
@@ -839,6 +1121,7 @@ async def search(arr, target):
     
     // Stop Python execution if running
     this.pythonRunner.stopExecution();
+    this.pythonRunnerB.stopExecution();
     
     // Resolve any pending step
     if (this.stepResolve) {
@@ -850,9 +1133,14 @@ async def search(arr, target):
     this.elements.logArea.textContent = "";
     this.elements.operationInfo.textContent = "";
     this.renderer.clear();
+    if (this.rendererB) this.rendererB.clear();
     this.elements.actionControls.innerHTML = "";
     this.renderer.sortedIndices.clear();
     this.renderer.foundIndices.clear();
+    if (this.rendererB) {
+      this.rendererB.sortedIndices.clear();
+      this.rendererB.foundIndices.clear();
+    }
     
     // Reset buttons
     this.elements.runBtn.style.display = "inline-block";
@@ -860,9 +1148,17 @@ async def search(arr, target):
     this.elements.resumeBtn.style.display = "none";
     this.elements.stepBtn.textContent = "Step Mode";
     
-    // Reset array and stats
+    // Reset arrays and stats
     this.array = [];
+    this.arrayB = [];
     this.stats = {
+      comparisons: 0,
+      swaps: 0,
+      steps: 0,
+      startTime: 0,
+      endTime: 0
+    };
+    this.statsB = {
       comparisons: 0,
       swaps: 0,
       steps: 0,
@@ -964,6 +1260,11 @@ async def search(arr, target):
     this.currentAlgorithm = this.elements.algorithmSelect.value;
     this.currentCategory = this.elements.categorySelect.value;
 
+    if (this.raceMode && this.currentCategory !== "sort") {
+      this.log("Race mode is only supported for sorting — using Category=Sort");
+      this.currentCategory = "sort";
+    }
+
     const validationError = this.validateCode(code, this.currentLanguage);
     if (validationError) {
       this.log(`Error: ${validationError}`);
@@ -999,66 +1300,87 @@ async def search(arr, target):
     this._runGeneration = this._generation;
     this.stats.startTime = Date.now();
     this.stats.endTime = 0;
+    this.statsB.startTime = Date.now();
+    this.statsB.endTime = 0;
 
     this.renderer.sortedIndices.clear();
+    if (this.rendererB) this.rendererB.sortedIndices.clear();
 
     this.stats.comparisons = 0;
     this.stats.swaps = 0;
     this.stats.steps = 0;
+    this.statsB.comparisons = 0;
+    this.statsB.swaps = 0;
+    this.statsB.steps = 0;
     this.updateStats();
 
     this.elements.runBtn.style.display = "none";
     this.elements.pauseBtn.style.display = "inline-block";
     this.elements.resumeBtn.style.display = "none";
 
+    const algoOpts = this.elements.algorithmSelect.options;
+    const algoNameA = algoOpts[this.elements.algorithmSelect.selectedIndex]?.textContent || this.currentAlgorithm;
     const modeLabel =
       this.currentCategory === "search"
-        ? `${this.currentAlgorithm} search`
-        : `${this.currentAlgorithm} sort`;
-    this.log(`Running ${this.currentLanguage} ${modeLabel}...`);
+        ? `${algoNameA} search`
+        : `${algoNameA} sort`;
+
+    if (this.raceMode) {
+      const algoNameB = this.elements.algorithmSelectB.options[this.elements.algorithmSelectB.selectedIndex]?.textContent || this.currentAlgorithmB;
+      this.log(`🏁 RACE: ${algoNameA}  vs  ${algoNameB} — same array, may the fastest win!`);
+    } else {
+      this.log(`Running ${this.currentLanguage} ${modeLabel}...`);
+    }
 
     try {
-      const api = this.createVisualizationAPI();
-
-      if (this.currentLanguage === 'javascript') {
-        await this.runJavaScript(code, api, {
+      if (this.raceMode) {
+        await this.runRace(code, {
           category: this.currentCategory,
           target: this.searchTarget,
           searchSortedRequires: needsSortedArrayForSearch,
           sortedRequiredByAlgo: sortedRequiredByAlgo,
         });
-      } else if (this.currentLanguage === 'python') {
-        const runGen = this._runGeneration;
-        if (!this.pythonRunner.isSupported()) {
-          await this.pythonRunner.init();
-        }
-        const result = await this.pythonRunner.run(
-          code, this.array, api, () => this.shouldStop,
-          {
+      } else {
+        const api = this.createVisualizationAPI('a');
+        if (this.currentLanguage === 'javascript') {
+          await this.runJavaScript(code, api, {
             category: this.currentCategory,
             target: this.searchTarget,
             searchSortedRequires: needsSortedArrayForSearch,
             sortedRequiredByAlgo: sortedRequiredByAlgo,
+            side: 'a',
+          });
+        } else if (this.currentLanguage === 'python') {
+          const runGen = this._runGeneration;
+          if (!this.pythonRunner.isSupported()) {
+            await this.pythonRunner.init();
           }
-        );
+          const result = await this.pythonRunner.run(
+            code, this.array, api, () => this.shouldStop,
+            {
+              category: this.currentCategory,
+              target: this.searchTarget,
+              searchSortedRequires: needsSortedArrayForSearch,
+              sortedRequiredByAlgo: sortedRequiredByAlgo,
+            }
+          );
+          if (this._runGeneration === runGen && !this.shouldStop && result && Array.isArray(result)) {
+            this.array = result;
+            this.renderer.render(this.array);
+          }
+        }
 
-        if (this._runGeneration === runGen && !this.shouldStop && result && Array.isArray(result)) {
-          this.array = result;
-          this.renderer.render(this.array);
+        if (!this.shouldStop) {
+          this.log("Algorithm completed!");
+          this.updateOperationInfo("Completed!");
+          this.sounds.play('complete');
+          if (this.currentCategory === "sort") {
+            for (let i = 0; i < this.array.length; i++) {
+              this.renderer.markSorted(i);
+            }
+          }
         }
       }
-
-      if (!this.shouldStop) {
-        this.log("Algorithm completed!");
-        this.updateOperationInfo("Completed!");
-        this.sounds.play('complete');
-        if (this.currentCategory === "sort") {
-          for (let i = 0; i < this.array.length; i++) {
-            this.renderer.markSorted(i);
-          }
-        }
-      }
-
     } catch (error) {
       this.log("Error: " + error.message);
       console.error("Execution error:", error);
@@ -1070,6 +1392,7 @@ async def search(arr, target):
       }
     } finally {
       this.stats.endTime = Date.now();
+      this.statsB.endTime = Date.now();
       this.updateStats();
       this.isRunning = false;
       this.isPaused = false;
@@ -1079,57 +1402,171 @@ async def search(arr, target):
       this.elements.resumeBtn.style.display = "none";
     }
   }
+
+  async runRace(codeA, sharedOpts) {
+    const language = this.currentLanguage;
+    const runGen = this._runGeneration;
+    const arraySeedA = [...this.array];
+    const arraySeedB = [...this.array];
+
+    const apiA = this.createVisualizationAPI('a');
+    const apiB = this.createVisualizationAPI('b');
+
+    const runAlgo = (code, api, seedArr, which) => {
+      if (language === 'javascript') {
+        return this.runJavaScript(code, api, {
+          category: 'sort',
+          target: this.searchTarget,
+          searchSortedRequires: sharedOpts.searchSortedRequires,
+          sortedRequiredByAlgo: sharedOpts.sortedRequiredByAlgo,
+          side: which,
+          initialSeed: seedArr,
+        });
+      } else {
+        const runner = which === 'a' ? this.pythonRunner : this.pythonRunnerB;
+        return runner.run(code, seedArr, api, () => this.shouldStop, {
+          category: 'sort',
+          target: this.searchTarget,
+          searchSortedRequires: false,
+          sortedRequiredByAlgo: false,
+          side: which,
+        }).then(result => {
+          if (this._runGeneration === runGen && !this.shouldStop && result && Array.isArray(result)) {
+            if (which === 'a') { this.array = result; this.renderer.render(this.array); }
+            else { this.arrayB = result; this.rendererB.render(this.arrayB); }
+          }
+        });
+      }
+    };
+
+    const codeB = this.getBuiltinSortCode(this.currentAlgorithmB, language);
+
+    let winnerA = false, winnerB = false;
+    const pA = (async () => {
+      await runAlgo(codeA, apiA, [...arraySeedA], 'a');
+      if (this._runGeneration === runGen && !this.shouldStop && !winnerA && !winnerB) {
+        winnerA = true;
+        const tA = this.stats.endTime ? this.stats.endTime - this.stats.startTime : 0;
+        this.log(`🏆 [A] finished first in ${tA}ms  (comparisons: ${this.stats.comparisons}, swaps: ${this.stats.swaps})`);
+      }
+      if (this._runGeneration === runGen && !this.shouldStop) {
+        this.stats.endTime = Date.now();
+        for (let i = 0; i < this.array.length; i++) this.renderer.markSorted(i);
+      }
+    })();
+    const pB = (async () => {
+      await runAlgo(codeB, apiB, [...arraySeedB], 'b');
+      if (this._runGeneration === runGen && !this.shouldStop && !winnerA && !winnerB) {
+        winnerB = true;
+        const tB = this.statsB.endTime ? this.statsB.endTime - this.statsB.startTime : 0;
+        this.log(`🏆 [B] finished first in ${tB}ms  (comparisons: ${this.statsB.comparisons}, swaps: ${this.statsB.swaps})`);
+      }
+      if (this._runGeneration === runGen && !this.shouldStop) {
+        this.statsB.endTime = Date.now();
+        for (let i = 0; i < this.arrayB.length; i++) this.rendererB.markSorted(i);
+      }
+    })();
+
+    await Promise.all([pA, pB]);
+
+    if (this._runGeneration === runGen && !this.shouldStop) {
+      this.sounds.play('complete');
+      this.updateOperationInfo("Race finished!");
+      const tA = this.stats.endTime - this.stats.startTime;
+      const tB = this.statsB.endTime - this.statsB.startTime;
+      this.log(`--- Race Result: [A] ${tA}ms  vs  [B] ${tB}ms ---`);
+    }
+  }
+
+  getBuiltinSortCode(algo, language) {
+    const t = {
+      javascript: {
+        bubble: `for (let i = 0; i < arr.length - 1; i++) { for (let j = 0; j < arr.length - i - 1; j++) { await compare(j, j + 1); if (arr[j] > arr[j + 1]) await swap(arr, j, j + 1); } }`,
+        selection: `for (let i = 0; i < arr.length - 1; i++) { let mi = i; for (let j = i + 1; j < arr.length; j++) { await compare(mi, j); if (arr[j] < arr[mi]) mi = j; } if (mi !== i) await swap(arr, i, mi); }`,
+        insertion: `for (let i = 1; i < arr.length; i++) { let k = arr[i], j = i - 1; while (j >= 0 && arr[j] > k) { await compare(j, i); await swap(arr, j, j + 1); j--; } arr[j + 1] = k; await renderArray(arr); }`,
+        merge: `async function mergeSortHelper(arr, left, right) { if (left < right) { const mid = Math.floor((left + right) / 2); await mergeSortHelper(arr, left, mid); await mergeSortHelper(arr, mid + 1, right); const L = arr.slice(left, mid + 1), R = arr.slice(mid + 1, right + 1); let i = 0, j = 0, k = left; while (i < L.length && j < R.length) { await compare(left + i, mid + 1 + j); if (L[i] <= R[j]) arr[k++] = L[i++]; else arr[k++] = R[j++]; await renderArray(arr); } while (i < L.length) { arr[k++] = L[i++]; await renderArray(arr); } while (j < R.length) { arr[k++] = R[j++]; await renderArray(arr); } } } await mergeSortHelper(arr, 0, arr.length - 1);`,
+        quick: `async function qs(arr, low, high) { if (low < high) { const pivot = arr[high]; let i = low - 1; for (let j = low; j < high; j++) { await compare(j, high); if (arr[j] <= pivot) { i++; if (i !== j) await swap(arr, i, j); } } if (i + 1 !== high) await swap(arr, i + 1, high); await qs(arr, low, i); await qs(arr, i + 2, high); } } await qs(arr, 0, arr.length - 1);`,
+        heap: `const n = arr.length; async function heapify(arr, hs, i) { let l = i; const lc = 2 * i + 1, rc = 2 * i + 2; if (lc < hs) { await compare(lc, l); if (arr[lc] > arr[l]) l = lc; } if (rc < hs) { await compare(rc, l); if (arr[rc] > arr[l]) l = rc; } if (l !== i) { await swap(arr, i, l); await heapify(arr, hs, l); } } for (let i = Math.floor(n / 2) - 1; i >= 0; i--) await heapify(arr, n, i); for (let i = n - 1; i > 0; i--) { await swap(arr, 0, i); await heapify(arr, i, 0); }`,
+        shell: `const n = arr.length; for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) { for (let i = gap; i < n; i++) { const tmp = arr[i]; let j = i; while (j >= gap) { await compare(j - gap, i); if (arr[j - gap] > tmp) { await swap(arr, j - gap, j); j -= gap; } else break; } arr[j] = tmp; await renderArray(arr); } }`,
+        cocktail: `let start = 0, end = arr.length - 1, swapped = true; while (swapped) { swapped = false; for (let i = start; i < end; i++) { await compare(i, i + 1); if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; } } if (!swapped) break; end--; swapped = false; for (let i = end - 1; i >= start; i--) { await compare(i, i + 1); if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; } } start++; }`,
+        counting: `if (arr.length <= 1) return; const min = Math.min(...arr), max = Math.max(...arr); const range = max - min + 1; const count = new Array(range).fill(0); for (let i = 0; i < arr.length; i++) { await compare(i, i); count[arr[i] - min]++; } const out = new Array(arr.length); let idx = 0; for (let b = 0; b < range; b++) { while (count[b] > 0) { out[idx] = min + b; count[b]--; idx++; if (idx < arr.length) await compare(idx, idx); } } for (let i = 0; i < arr.length; i++) arr[i] = out[i]; await renderArray(arr);`,
+        radix: `const c = async (arr, n, exp) => { const out = new Array(n).fill(0); const cnt = new Array(10).fill(0); for (let i = 0; i < n; i++) cnt[Math.floor(arr[i] / exp) % 10]++; for (let i = 1; i < 10; i++) cnt[i] += cnt[i - 1]; for (let i = n - 1; i >= 0; i--) { const d = Math.floor(arr[i] / exp) % 10; out[cnt[d] - 1] = arr[i]; cnt[d]--; await compare(i, i); } for (let i = 0; i < n; i++) arr[i] = out[i]; await renderArray(arr); }; const n = arr.length, m = Math.max(...arr); for (let exp = 1; Math.floor(m / exp) > 0; exp *= 10) await c(arr, n, exp);`
+      },
+      python: {
+        bubble: `async def sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(n - i - 1):\n            await compare(j, j + 1)\n            if arr[j] > arr[j + 1]:\n                await swap(arr, j, j + 1)`,
+        selection: `async def sort(arr):\n    n = len(arr)\n    for i in range(n - 1):\n        mi = i\n        for j in range(i + 1, n):\n            await compare(mi, j)\n            if arr[j] < arr[mi]: mi = j\n        if mi != i: await swap(arr, i, mi)`,
+        insertion: `async def sort(arr):\n    for i in range(1, len(arr)):\n        k = arr[i]\n        j = i - 1\n        while j >= 0 and arr[j] > k:\n            await compare(j, i)\n            await swap(arr, j, j + 1)\n            j -= 1\n        arr[j + 1] = k\n        await render_array(arr)`,
+        merge: `async def merge_sort(arr, l, r):\n    if l < r:\n        mid = (l + r) // 2\n        await merge_sort(arr, l, mid)\n        await merge_sort(arr, mid + 1, r)\n        L = arr[l:mid + 1]; R = arr[mid + 1:r + 1]\n        i = j = 0; k = l\n        while i < len(L) and j < len(R):\n            await compare(l + i, mid + 1 + j)\n            if L[i] <= R[j]: arr[k] = L[i]; i += 1\n            else: arr[k] = R[j]; j += 1\n            k += 1\n            await render_array(arr)\n        while i < len(L):\n            arr[k] = L[i]; i += 1; k += 1\n            await render_array(arr)\n        while j < len(R):\n            arr[k] = R[j]; j += 1; k += 1\n            await render_array(arr)\nasync def sort(arr):\n    await merge_sort(arr, 0, len(arr) - 1)`,
+        quick: `async def qs(arr, low, high):\n    if low < high:\n        pivot = arr[high]\n        i = low - 1\n        for j in range(low, high):\n            await compare(j, high)\n            if arr[j] <= pivot:\n                i += 1\n                if i != j: await swap(arr, i, j)\n        if i + 1 != high: await swap(arr, i + 1, high)\n        await qs(arr, low, i)\n        await qs(arr, i + 2, high)\nasync def sort(arr):\n    await qs(arr, 0, len(arr) - 1)`,
+        heap: `async def heapify(arr, n, i):\n    l = i\n    lc = 2 * i + 1; rc = 2 * i + 2\n    if lc < n:\n        await compare(lc, l)\n        if arr[lc] > arr[l]: l = lc\n    if rc < n:\n        await compare(rc, l)\n        if arr[rc] > arr[l]: l = rc\n    if l != i:\n        await swap(arr, i, l)\n        await heapify(arr, n, l)\nasync def sort(arr):\n    n = len(arr)\n    for i in range(n // 2 - 1, -1, -1): await heapify(arr, n, i)\n    for i in range(n - 1, 0, -1):\n        await swap(arr, 0, i)\n        await heapify(arr, i, 0)`,
+        shell: `async def sort(arr):\n    n = len(arr)\n    gap = n // 2\n    while gap > 0:\n        for i in range(gap, n):\n            tmp = arr[i]\n            j = i\n            while j >= gap:\n                await compare(j - gap, i)\n                if arr[j - gap] > tmp:\n                    await swap(arr, j - gap, j)\n                    j -= gap\n                else: break\n            arr[j] = tmp\n            await render_array(arr)\n        gap //= 2`,
+        cocktail: `async def sort(arr):\n    n = len(arr)\n    start = 0; end = n - 1; swapped = True\n    while swapped:\n        swapped = False\n        for i in range(start, end):\n            await compare(i, i + 1)\n            if arr[i] > arr[i + 1]:\n                await swap(arr, i, i + 1); swapped = True\n        if not swapped: break\n        end -= 1; swapped = False\n        for i in range(end - 1, start - 1, -1):\n            await compare(i, i + 1)\n            if arr[i] > arr[i + 1]:\n                await swap(arr, i, i + 1); swapped = True\n        start += 1`,
+        counting: `async def sort(arr):\n    if len(arr) <= 1: return\n    mn = min(arr); mx = max(arr)\n    rng = mx - mn + 1\n    count = [0] * rng\n    for i in range(len(arr)):\n        await compare(i, i)\n        count[arr[i] - mn] += 1\n    out = [0] * len(arr); idx = 0\n    for b in range(rng):\n        while count[b] > 0:\n            out[idx] = mn + b; count[b] -= 1; idx += 1\n            if idx < len(arr): await compare(idx, idx)\n    for i in range(len(arr)): arr[i] = out[i]\n    await render_array(arr)`,
+        radix: `async def _c(arr, n, exp):\n    out = [0] * n; cnt = [0] * 10\n    for i in range(n): cnt[(arr[i] // exp) % 10] += 1\n    for i in range(1, 10): cnt[i] += cnt[i - 1]\n    for i in range(n - 1, -1, -1):\n        d = (arr[i] // exp) % 10\n        out[cnt[d] - 1] = arr[i]\n        cnt[d] -= 1\n        await compare(i, i)\n    for i in range(n): arr[i] = out[i]\n    await render_array(arr)\nasync def sort(arr):\n    n = len(arr); m = max(arr); exp = 1\n    while m // exp > 0:\n        await _c(arr, n, exp)\n        exp *= 10`
+      }
+    };
+    return (t[language] && t[language][algo]) || t[language].bubble;
+  }
   
-  createVisualizationAPI() {
+  createVisualizationAPI(side = 'a') {
+    const isA = side === 'a';
+    const renderer = isA ? this.renderer : this.rendererB;
+    const statsObj = isA ? this.stats : this.statsB;
+    const getArr = () => isA ? this.array : this.arrayB;
+    const setArr = (arr) => { if (isA) this.array = [...arr]; else this.arrayB = [...arr]; };
+    const tag = isA ? "[A]" : "[B]";
+
     return {
       compare: async (i, j) => {
         if (this.shouldStop) return;
-        this.stats.comparisons++;
-        this.stats.steps++;
+        statsObj.comparisons++;
+        statsObj.steps++;
         this.updateStats();
-        this.log(`Comparing indices ${i} and ${j}`);
-        this.updateOperationInfo(`Comparing ${i} and ${j}`);
-        this.renderer.renderWithHighlight(this.array, [i, j], 'comparing');
-        const val1 = this.array[i], val2 = this.array[j];
+        this.log(`${tag} Comparing indices ${i} and ${j}`);
+        if (isA) this.updateOperationInfo(`A: Comparing ${i},${j}`);
+        const arr = getArr();
+        renderer.renderWithHighlight(arr, [i, j], 'comparing');
+        const v1 = arr[i], v2 = arr[j];
         if (this.musicalMode) {
-          this.sounds.playMusical(val1, val2, this.array);
-        } else {
+          this.sounds.playMusical(v1, v2, arr);
+        } else if (isA) {
           this.sounds.play('compare');
         }
         await this.sleep(this.speed);
       },
 
-      swap: async (arr, i, j) => {
+      swap: async (arrRef, i, j) => {
         if (this.shouldStop) return;
-        this.stats.swaps++;
-        this.stats.steps++;
+        statsObj.swaps++;
+        statsObj.steps++;
         this.updateStats();
-        this.log(`Swapping indices ${i} and ${j}`);
-        this.updateOperationInfo(`Swapping ${i} and ${j}`);
-        await this.renderer.animatedSwap(arr, i, j, this.speed);
-        this.array = [...arr];
+        this.log(`${tag} Swapping indices ${i} and ${j}`);
+        if (isA) this.updateOperationInfo(`${tag} Swapping ${i},${j}`);
+        await renderer.animatedSwap(arrRef, i, j, this.speed);
+        setArr(arrRef);
+        const arr = getArr();
         if (this.musicalMode) {
-          this.sounds.playMusical(this.array[i], this.array[j], this.array);
-        } else {
+          this.sounds.playMusical(arr[i], arr[j], arr);
+        } else if (isA) {
           this.sounds.play('swap');
         }
       },
 
-      renderArray: async (arr) => {
+      renderArray: async (arrRef) => {
         if (this.shouldStop) return;
-        this.stats.steps++;
+        statsObj.steps++;
         this.updateStats();
-        this.array = [...arr];
-        this.renderer.render(this.array);
+        setArr(arrRef);
+        renderer.render(getArr());
         await this.sleep(this.speed / 2);
       },
 
       markFound: async (i) => {
         if (this.shouldStop) return;
-        this.log(`Found match at index ${i}`);
-        this.updateOperationInfo(`Found at index ${i}`);
-        this.renderer.markFound(i);
-        this.sounds.play('complete');
+        this.log(`${tag} Found match at index ${i}`);
+        if (isA) this.updateOperationInfo(`${tag} Found at ${i}`);
+        renderer.markFound(i);
+        if (isA) this.sounds.play('complete');
         await this.sleep(this.speed);
       },
 
@@ -1138,11 +1575,11 @@ async def search(arr, target):
       },
 
       log: (msg) => {
-        this.log(msg);
+        this.log(`${tag} ${msg}`);
       },
 
       markSorted: (i) => {
-        this.renderer.markSorted(i);
+        renderer.markSorted(i);
       }
     };
   }
@@ -1152,17 +1589,25 @@ async def search(arr, target):
     const category = options.category || "sort";
     const target = options.target;
     const runGen = this._runGeneration;
+    const side = options.side || 'a';
+    const isA = side === 'a';
 
-    let runtimeArr = [...this.array];
+    let runtimeArr = options.initialSeed ? [...options.initialSeed] : [...this.array];
 
     if (category === "search" && options.searchSortedRequires) {
       runtimeArr.sort((a, b) => a - b);
       if (this._runGeneration === runGen && !this.shouldStop) {
-        this.array = [...runtimeArr];
-        this.renderer.foundIndices.clear();
-        this.renderer.render(this.array);
+        if (isA) {
+          this.array = [...runtimeArr];
+          this.renderer.foundIndices.clear();
+          this.renderer.render(this.array);
+        } else {
+          this.arrayB = [...runtimeArr];
+          this.rendererB.foundIndices.clear();
+          this.rendererB.render(this.arrayB);
+        }
         const forceReason = options.sortedRequiredByAlgo
-          ? "Pre-sorted array (algorithm requires ordered input; Linear supports unordered)"
+          ? "Pre-sorted array (algorithm requires ordered input)"
           : "Pre-sorted array (Pre-Sort toggle enabled)";
         this.log(forceReason);
         await this.sleep(Math.max(100, this.speed));
@@ -1213,8 +1658,16 @@ async def search(arr, target):
     }
 
     if (this._runGeneration === runGen && !this.shouldStop) {
-      this.array = [...runtimeArr];
-      this.renderer.render(this.array);
+      if (isA) {
+        this.array = [...runtimeArr];
+        this.renderer.render(this.array);
+        this.stats.endTime = this.stats.endTime || Date.now();
+      } else {
+        this.arrayB = [...runtimeArr];
+        this.rendererB.render(this.arrayB);
+        this.statsB.endTime = this.statsB.endTime || Date.now();
+      }
+      this.updateStats();
     }
   }
   

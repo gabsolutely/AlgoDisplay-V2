@@ -783,3 +783,83 @@ input[type="checkbox"] {
   from { filter: brightness(1); }
   to { filter: brightness(1.3); }
 }
+
+/* ---- Race / Compare mode ---- */
+.viz-wrapper {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.viz-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-label {
+  background: var(--card);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+}
+
+.viz-side-b .viz-label {
+  color: #a78bfa;
+  border-color: #a78bfa;
+}
+
+.viz-side .visualizer {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.viz-side-b .visualizer .bar {
+  background: #a78bfa;
+}
+
+.viz-side-b .visualizer .bar.comparing {
+  background: var(--danger) !important;
+}
+.viz-side-b .visualizer .bar.swapping {
+  background: var(--warn) !important;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--warn) 80%, transparent),
+              0 0 35px color-mix(in srgb, var(--warn) 40%, transparent);
+  z-index: 10;
+}
+.viz-side-b .visualizer .bar.sorted,
+.viz-side-b .visualizer .bar.found {
+  background: var(--ok) !important;
+}
+
+.info-card.info-card-b {
+  border-left: 4px solid #a78bfa;
+}
+
+#stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+#stats-grid .info-card-log {
+  grid-column: 1 / -1;
+}
+
+.viz-wrapper.race-mode .visualizer {
+  height: 280px;
+}
+
+@media (max-width: 800px) {
+  .viz-wrapper {
+    flex-direction: column;
+  }
+  #stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
