@@ -1,0 +1,32 @@
+{
+  "name": "algodisplay-test-suite",
+  "version": "1.0.0",
+  "description": "Test suite for AlgoDisplay algorithm visualizations",
+  "main": "javascript/test-runner.js",
+  "scripts": {
+    "test": "node javascript/test-runner.js",
+    "test:js": "node javascript/test-runner.js",
+    "test:python": "cd python && python test_runner.py",
+    "test:all": "npm run test:js && npm run test:python",
+    "benchmark": "node javascript/benchmark.js",
+    "benchmark:python": "cd python && python benchmark.py",
+    "test:search": "node javascript/search-test.js",
+    "test:search:python": "cd python && python search_algorithms.py"
+  },
+  "keywords": [
+    "algorithms",
+    "sorting",
+    "searching",
+    "visualization",
+    "testing",
+    "javascript",
+    "python"
+  ],
+  "author": "AlgoDisplay Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
