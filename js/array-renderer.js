@@ -4,6 +4,7 @@ class ArrayRenderer {
     this.container = null;
     this.bars = [];
     this.sortedIndices = new Set();
+    this.foundIndices = new Set();
   }
   
   init(container) {
@@ -33,14 +34,12 @@ class ArrayRenderer {
       bar.setAttribute("data-value", value);
       bar.setAttribute("data-index", index);
       
-      // Set color based on sorted state
-      if (this.sortedIndices.has(index)) {
-        bar.style.background = '#10b981'; // green for sorted
-      } else {
-        bar.style.background = '#3b82f6'; // blue for normal
+      if (this.foundIndices.has(index)) {
+        bar.classList.add('found');
+      } else if (this.sortedIndices.has(index)) {
+        bar.classList.add('active');
       }
       
-      // Enhanced styling
       bar.style.transition = 'height 0.3s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease';
       bar.style.borderRadius = '4px 4px 0 0';
       bar.style.margin = '0 2px';
@@ -61,14 +60,15 @@ class ArrayRenderer {
     
     this.render(array);
     
-    // Clear all previous highlights first
     this.bars.forEach(bar => {
       bar.classList.remove('comparing', 'swapping', 'active', 'sorted');
+      const idx = parseInt(bar.getAttribute("data-index"));
+      if (this.sortedIndices.has(idx)) bar.classList.add('active');
+      if (this.foundIndices.has(idx)) bar.classList.add('found');
     });
     
-    // Apply highlighting using CSS classes
     indices.forEach(index => {
-      if (this.bars[index]) {
+      if (this.bars[index] && !this.foundIndices.has(index)) {
         this.bars[index].classList.add(type);
       }
     });
@@ -82,15 +82,12 @@ class ArrayRenderer {
   }
 
   markFound(index) {
+    this.foundIndices.add(index);
     if (this.bars[index]) {
-      this.bars[index].classList.add('comparing');
-      this.bars[index].classList.add('swapping');
-      this.bars[index].style.background =
-        'linear-gradient(135deg, #8b5cf6, #ec4899) !important';
-      this.bars[index].style.boxShadow =
-        '0 0 25px rgba(139, 92, 246, 0.9), 0 0 40px rgba(236, 72, 153, 0.6)';
+      this.bars[index].classList.remove('comparing', 'swapping');
+      this.bars[index].classList.add('found');
       this.bars[index].style.zIndex = '20';
-      this.bars[index].style.transform = 'translateY(-6px) scale(1.05)';
+      this.bars[index].style.transform = 'translateY(-6px) scale(1.08)';
     }
   }
   
@@ -100,39 +97,30 @@ class ArrayRenderer {
     const bar1 = this.bars[i];
     const bar2 = this.bars[j];
     
-    // Store original styles
     const originalTransform1 = bar1.style.transform;
     const originalTransform2 = bar2.style.transform;
     
-    // Perform array swap first
     const temp = array[i];
     array[i] = array[j];
     array[j] = temp;
     
-    // Add swapping class for glow
     bar1.classList.add('swapping');
     bar2.classList.add('swapping');
     
-    // Get current positions
     const bar1Rect = bar1.getBoundingClientRect();
     const bar2Rect = bar2.getBoundingClientRect();
     
-    // Apply very fast transform transition
     bar1.style.transition = `transform ${duration}ms ease`;
     bar2.style.transition = `transform ${duration}ms ease`;
     
-    // Calculate translation distances
     const distance1 = bar2Rect.left - bar1Rect.left;
     const distance2 = bar1Rect.left - bar2Rect.left;
     
-    // Apply transforms to swap positions
     bar1.style.transform = `translateX(${distance1}px)`;
     bar2.style.transform = `translateX(${distance2}px)`;
     
-    // Wait for animation
     await new Promise(resolve => setTimeout(resolve, duration));
     
-    // Instantly reset transforms and classes
     bar1.style.transition = 'none';
     bar2.style.transition = 'none';
     bar1.style.transform = originalTransform1;
@@ -140,7 +128,6 @@ class ArrayRenderer {
     bar1.classList.remove('swapping');
     bar2.classList.remove('swapping');
     
-    // Update heights and values
     const maxValue = Math.max(...array, 1);
     const containerHeight = 280;
     
@@ -157,6 +144,7 @@ class ArrayRenderer {
     }
     this.bars = [];
     this.sortedIndices.clear();
+    this.foundIndices.clear();
   }
 
   updateBar(index, value, color = null) {

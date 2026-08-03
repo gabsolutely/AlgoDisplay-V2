@@ -9,6 +9,7 @@ class AlgorithmVisualizer {
     this.shouldStop = false;
     this.speed = 300;
     this.soundEnabled = true;
+    this.musicalMode = false;
     this.currentLanguage = 'javascript';
     this.currentCategory = 'sort';
     this.currentAlgorithm = 'bubble';
@@ -43,7 +44,9 @@ class AlgorithmVisualizer {
       presetSelect: document.getElementById("preset-select"),
       arraySizeInput: document.getElementById("array-size"),
       targetInput: document.getElementById("target-input"),
+      searchSortToggle: document.getElementById("search-sort-toggle"),
       soundToggle: document.getElementById("sound-toggle"),
+      musicalToggle: document.getElementById("musical-toggle"),
       themeToggle: document.getElementById("theme-toggle"),
       paletteToggle: document.getElementById("palette-toggle"),
       editor: document.getElementById("code-editor"),
@@ -108,15 +111,8 @@ class AlgorithmVisualizer {
     }
 
     const updateSpeed = () => {
-      const baseSpeed = parseInt(this.elements.speedSlider.value);
-      const arraySize = this.array.length || 20;
-      let adaptiveSpeed = baseSpeed;
-      if (arraySize > 20) {
-        adaptiveSpeed = Math.max(50, baseSpeed - (arraySize - 20) * 10);
-      } else if (arraySize > 10) {
-        adaptiveSpeed = Math.max(50, baseSpeed - (arraySize - 10) * 5);
-      }
-      this.speed = adaptiveSpeed;
+      this.speed = parseInt(this.elements.speedSlider.value);
+      if (isNaN(this.speed)) this.speed = 300;
       this.elements.speedValue.textContent = this.speed + "ms";
     };
 
@@ -144,6 +140,14 @@ class AlgorithmVisualizer {
       this.soundEnabled = this.elements.soundToggle.checked;
       this.sounds.setEnabled(this.soundEnabled);
     };
+
+    if (this.elements.musicalToggle) {
+      this.elements.musicalToggle.onchange = () => {
+        this.musicalMode = this.elements.musicalToggle.checked;
+        this.sounds.setMusicalMode(this.musicalMode);
+        this.log("Musical mode: " + (this.musicalMode ? "ON" : "OFF"));
+      };
+    }
 
     if (this.elements.themeToggle) {
       this.elements.themeToggle.onchange = (e) => {
@@ -368,6 +372,7 @@ while (swapped) {
 for (let i = 0; i < arr.length; i++) {
   await compare(i, i);
   if (arr[i] === target) {
+    await markFound(i);
     log("Found at index " + i);
     return i;
   }
@@ -379,7 +384,7 @@ let left = 0, right = arr.length - 1;
 while (left <= right) {
   const mid = Math.floor((left + right) / 2);
   await compare(mid, mid);
-  if (arr[mid] === target) { log("Found at " + mid); return mid; }
+  if (arr[mid] === target) { await markFound(mid); log("Found at " + mid); return mid; }
   if (arr[mid] < target) left = mid + 1;
   else right = mid - 1;
 }
@@ -390,18 +395,19 @@ let left = 0, right = arr.length - 1;
 while (left <= right && target >= arr[left] && target <= arr[right]) {
   if (left === right) {
     await compare(left, left);
-    return arr[left] === target ? left : -1;
+    if (arr[left] === target) { await markFound(left); return left; }
+    return -1;
   }
   const pos = left + Math.floor(((target - arr[left]) * (right - left)) / (arr[right] - arr[left]));
   await compare(pos, pos);
-  if (arr[pos] === target) { log("Found at " + pos); return pos; }
+  if (arr[pos] === target) { await markFound(pos); log("Found at " + pos); return pos; }
   if (arr[pos] < target) left = pos + 1;
   else right = pos - 1;
 }
 log("Target not found");
 return -1;`,
           exponential: `// Exponential Search (sorted)
-if (arr[0] === target) { await compare(0, 0); return 0; }
+if (arr[0] === target) { await compare(0, 0); await markFound(0); return 0; }
 let i = 1;
 while (i < arr.length && arr[i] <= target) {
   await compare(i, i);
@@ -411,7 +417,7 @@ let left = Math.floor(i / 2), right = Math.min(i, arr.length - 1);
 while (left <= right) {
   const mid = Math.floor((left + right) / 2);
   await compare(mid, mid);
-  if (arr[mid] === target) { log("Found at " + mid); return mid; }
+  if (arr[mid] === target) { await markFound(mid); log("Found at " + mid); return mid; }
   if (arr[mid] < target) left = mid + 1;
   else right = mid - 1;
 }
@@ -423,7 +429,7 @@ while (left <= right) {
   if (right - left < 3) {
     for (let k = left; k <= right; k++) {
       await compare(k, k);
-      if (arr[k] === target) { log("Found at " + k); return k; }
+      if (arr[k] === target) { await markFound(k); log("Found at " + k); return k; }
     }
     break;
   }
@@ -431,8 +437,8 @@ while (left <= right) {
   const m2 = right - Math.floor((right - left) / 3);
   await compare(m1, m1);
   await compare(m2, m2);
-  if (arr[m1] === target) { log("Found at " + m1); return m1; }
-  if (arr[m2] === target) { log("Found at " + m2); return m2; }
+  if (arr[m1] === target) { await markFound(m1); log("Found at " + m1); return m1; }
+  if (arr[m2] === target) { await markFound(m2); log("Found at " + m2); return m2; }
   if (target < arr[m1]) right = m1 - 1;
   else if (target > arr[m2]) left = m2 + 1;
   else { left = m1 + 1; right = m2 - 1; }
@@ -591,6 +597,7 @@ async def search(arr, target):
     for i in range(len(arr)):
         await compare(i, i)
         if arr[i] == target:
+            await mark_found(i)
             log("Found at index " + str(i))
             return i
     log("Target not found")
@@ -603,6 +610,7 @@ async def search(arr, target):
         mid = (left + right) // 2
         await compare(mid, mid)
         if arr[mid] == target:
+            await mark_found(mid)
             log("Found at " + str(mid))
             return mid
         if arr[mid] < target:
@@ -618,11 +626,15 @@ async def search(arr, target):
     while left <= right and arr[left] <= target <= arr[right]:
         if left == right:
             await compare(left, left)
-            return left if arr[left] == target else -1
+            if arr[left] == target:
+                await mark_found(left)
+                return left
+            return -1
         pos = left + (((target - arr[left]) * (right - left)) //
                       (arr[right] - arr[left]))
         await compare(pos, pos)
         if arr[pos] == target:
+            await mark_found(pos)
             log("Found at " + str(pos))
             return pos
         if arr[pos] < target:
@@ -638,6 +650,7 @@ async def search(arr, target):
         return -1
     if arr[0] == target:
         await compare(0, 0)
+        await mark_found(0)
         return 0
     i = 1
     while i < n and arr[i] <= target:
@@ -649,6 +662,7 @@ async def search(arr, target):
         mid = (left + right) // 2
         await compare(mid, mid)
         if arr[mid] == target:
+            await mark_found(mid)
             log("Found at " + str(mid))
             return mid
         if arr[mid] < target:
@@ -666,6 +680,7 @@ async def search(arr, target):
             for k in range(left, right + 1):
                 await compare(k, k)
                 if arr[k] == target:
+                    await mark_found(k)
                     log("Found at " + str(k))
                     return k
             break
@@ -674,8 +689,10 @@ async def search(arr, target):
         await compare(m1, m1)
         await compare(m2, m2)
         if arr[m1] == target:
+            await mark_found(m1)
             return m1
         if arr[m2] == target:
+            await mark_found(m2)
             return m2
         if target < arr[m1]:
             right = m1 - 1
@@ -707,10 +724,10 @@ async def search(arr, target):
     switch (preset) {
       case "nearly-sorted": {
         const arr = Array.from({ length: size }, (_, i) => i * 4 + 20);
-        const swaps = Math.max(2, Math.floor(size * 0.22));
+        const swaps = Math.max(3, Math.floor(size * 0.3));
         for (let k = 0; k < swaps; k++) {
           const a = Math.floor(Math.random() * size);
-          const spread = Math.max(4, Math.floor(size * 0.18));
+          const spread = Math.max(6, Math.floor(size * 0.25));
           const offset = Math.floor(Math.random() * (spread * 2 + 1)) - spread;
           const b = Math.max(0, Math.min(size - 1, a + offset));
           [arr[a], arr[b]] = [arr[b], arr[a]];
@@ -761,6 +778,13 @@ async def search(arr, target):
 
     this.array = this.generatePreset(size, preset);
 
+    if (this.currentCategory === "search") {
+      const shouldPreSort = this.elements.searchSortToggle ? this.elements.searchSortToggle.checked : true;
+      if (shouldPreSort) {
+        this.array.sort((a, b) => a - b);
+      }
+    }
+
     if (this.currentCategory === "search" && this.elements.targetInput) {
       const pickRandomFromArr = Math.random() < 0.7 && this.array.length > 0;
       this.searchTarget = pickRandomFromArr
@@ -770,6 +794,7 @@ async def search(arr, target):
     }
 
     this.renderer.sortedIndices.clear();
+    this.renderer.foundIndices.clear();
     this.elements.container.innerHTML = '';
     this.renderer.render(this.array, this._generation);
 
@@ -826,6 +851,8 @@ async def search(arr, target):
     this.elements.operationInfo.textContent = "";
     this.renderer.clear();
     this.elements.actionControls.innerHTML = "";
+    this.renderer.sortedIndices.clear();
+    this.renderer.foundIndices.clear();
     
     // Reset buttons
     this.elements.runBtn.style.display = "inline-block";
@@ -887,7 +914,7 @@ async def search(arr, target):
       if (code.includes(fnSig) && !code.includes(asyncSig)) {
         return `Python ${fnName} function must be async (use '${asyncSig}')`;
       }
-      const visualizationFunctions = ['compare', 'swap', 'render_array'];
+      const visualizationFunctions = ['compare', 'swap', 'render_array', 'mark_found'];
       for (const func of visualizationFunctions) {
         const regex = new RegExp(`\\b${func}\\s*\\(`, 'g');
         const matches = code.match(regex);
@@ -900,7 +927,7 @@ async def search(arr, target):
         }
       }
     } else if (language === 'javascript') {
-      const visualizationFunctions = ['compare', 'swap', 'renderArray'];
+      const visualizationFunctions = ['compare', 'swap', 'renderArray', 'markFound'];
       for (const func of visualizationFunctions) {
         const regex = new RegExp(`\\b${func}\\s*\\(`, 'g');
         const matches = code.match(regex);
@@ -943,7 +970,14 @@ async def search(arr, target):
       return;
     }
 
-    const needsSortedArrayForSearch = this.currentCategory === "search";
+    const sortedRequiredByAlgo =
+      this.currentCategory === "search" &&
+      ["binary", "interpolation", "exponential", "ternary"].includes(this.currentAlgorithm);
+    const userWantsPreSort =
+      this.currentCategory === "search" &&
+      this.elements.searchSortToggle &&
+      this.elements.searchSortToggle.checked;
+    const needsSortedArrayForSearch = sortedRequiredByAlgo || userWantsPreSort;
 
     if (this.currentCategory === "search") {
       if (this.searchTarget == null && this.elements.targetInput) {
@@ -991,8 +1025,10 @@ async def search(arr, target):
           category: this.currentCategory,
           target: this.searchTarget,
           searchSortedRequires: needsSortedArrayForSearch,
+          sortedRequiredByAlgo: sortedRequiredByAlgo,
         });
       } else if (this.currentLanguage === 'python') {
+        const runGen = this._runGeneration;
         if (!this.pythonRunner.isSupported()) {
           await this.pythonRunner.init();
         }
@@ -1002,10 +1038,11 @@ async def search(arr, target):
             category: this.currentCategory,
             target: this.searchTarget,
             searchSortedRequires: needsSortedArrayForSearch,
+            sortedRequiredByAlgo: sortedRequiredByAlgo,
           }
         );
 
-        if (result && Array.isArray(result)) {
+        if (this._runGeneration === runGen && !this.shouldStop && result && Array.isArray(result)) {
           this.array = result;
           this.renderer.render(this.array);
         }
@@ -1053,7 +1090,12 @@ async def search(arr, target):
         this.log(`Comparing indices ${i} and ${j}`);
         this.updateOperationInfo(`Comparing ${i} and ${j}`);
         this.renderer.renderWithHighlight(this.array, [i, j], 'comparing');
-        this.sounds.play('compare');
+        const val1 = this.array[i], val2 = this.array[j];
+        if (this.musicalMode) {
+          this.sounds.playMusical(val1, val2, this.array);
+        } else {
+          this.sounds.play('compare');
+        }
         await this.sleep(this.speed);
       },
 
@@ -1066,7 +1108,11 @@ async def search(arr, target):
         this.updateOperationInfo(`Swapping ${i} and ${j}`);
         await this.renderer.animatedSwap(arr, i, j, this.speed);
         this.array = [...arr];
-        this.sounds.play('swap');
+        if (this.musicalMode) {
+          this.sounds.playMusical(this.array[i], this.array[j], this.array);
+        } else {
+          this.sounds.play('swap');
+        }
       },
 
       renderArray: async (arr) => {
@@ -1105,15 +1151,22 @@ async def search(arr, target):
     console.log("Running JavaScript code directly...");
     const category = options.category || "sort";
     const target = options.target;
+    const runGen = this._runGeneration;
 
     let runtimeArr = [...this.array];
 
     if (category === "search" && options.searchSortedRequires) {
       runtimeArr.sort((a, b) => a - b);
-      this.array = [...runtimeArr];
-      this.renderer.render(this.array);
-      this.log("Pre-sorted array (required by this search algorithm)");
-      await this.sleep(Math.max(100, this.speed));
+      if (this._runGeneration === runGen && !this.shouldStop) {
+        this.array = [...runtimeArr];
+        this.renderer.foundIndices.clear();
+        this.renderer.render(this.array);
+        const forceReason = options.sortedRequiredByAlgo
+          ? "Pre-sorted array (algorithm requires ordered input; Linear supports unordered)"
+          : "Pre-sorted array (Pre-Sort toggle enabled)";
+        this.log(forceReason);
+        await this.sleep(Math.max(100, this.speed));
+      }
     }
 
     if (category === "search") {
@@ -1159,13 +1212,16 @@ async def search(arr, target):
       }
     }
 
-    this.array = [...runtimeArr];
-    this.renderer.render(this.array);
+    if (this._runGeneration === runGen && !this.shouldStop) {
+      this.array = [...runtimeArr];
+      this.renderer.render(this.array);
+    }
   }
   
   async sleep(ms) {
+    const sleepGeneration = this._runGeneration;
     return new Promise(resolve => {
-      if (this.shouldStop) {
+      if (this.shouldStop || this._generation !== sleepGeneration) {
         resolve();
         return;
       }
@@ -1176,7 +1232,7 @@ async def search(arr, target):
       } else {
         const startTime = Date.now();
         const checkState = setInterval(() => {
-          if (this.shouldStop) {
+          if (this.shouldStop || this._generation !== sleepGeneration) {
             clearInterval(checkState);
             resolve();
             return;

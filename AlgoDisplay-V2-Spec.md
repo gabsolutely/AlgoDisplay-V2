@@ -28,16 +28,16 @@ The one-line pitch: **"Bring your own algorithm, watch it run, on anything — a
 - Linear, Binary, Interpolation, Exponential, Ternary
 
 **Phase 3 — Graph algorithms** (new renderer: nodes + edges, new interaction model — the real V2 milestone)
-- Traversal: BFS, DFS
-- Shortest path: Dijkstra, A*, Bellman-Ford (teaches negative weights / why Dijkstra fails there)
+- Traversal: BFS, **DFS** (depth-first search — LeetCode-style connectivity/cycle detection)
+- Shortest path: **Dijkstra, A\***, Bellman-Ford (teaches negative weights / why Dijkstra fails there)
 - MST: Prim's, Kruskal's
 - Topological Sort
-- Grid/maze mode reusing the same engine: click-to-place walls, drag start/end, maze generation (recursive backtracking, Prim's-based maze gen)
+- **Grid/maze mode** reusing the same engine: click-to-place walls, drag start/end, maze generation (recursive backtracking, Prim's-based maze gen) — re-run DFS/A\*/Dijkstra directly on the generated maze
 
-**Phase 4 — Trees**
-- BST insert / delete / search / traversal (in-order, pre-order, post-order, level-order)
-- AVL Tree (rotation visualization — this is usually the most requested "I never understood this until I saw it" feature)
-- Heap (binary min/max heap) — sift-up/sift-down animation, doubles as a visual explainer for Heap Sort from Phase 1
+**Phase 4 — Trees** (BST / AVL / Heap — core LeetCode tree problems)
+- **BST** insert / delete / search / traversal (in-order, pre-order, post-order, level-order)
+- **AVL Tree** (rotation visualization — this is usually the most requested "I never understood this until I saw it" feature)
+- **Heap** (binary min/max heap) — sift-up/sift-down animation, doubles as a visual explainer for Heap Sort from Phase 1
 - Trie — nice-to-have if time allows, good for a "string algorithms" teaser
 
 **Phase 5 — Stretch (only if the above shipped clean)**
@@ -51,13 +51,13 @@ The one-line pitch: **"Bring your own algorithm, watch it run, on anything — a
 
 ### 1.2 Convenience & UX features (higher leverage per hour than raw algorithm count)
 
-- **Algorithm racing mode** — two algorithms, same seed/array/graph, side-by-side. This is your best demo moment; almost nobody in the space does this cleanly across categories.
+- **⚠️ Algorithm racing / side-by-side comparison mode** (HIGH PRIORITY) — two algorithms, same seed/array/graph, side-by-side synchronized playback with independent stat panels. Compare e.g. Bubble vs Quick on the same nearly-sorted input, or Dijkstra vs A* on the same maze. This is your best demo moment; almost nobody in the space does this cleanly across categories. Ships for Phase 2 (sorts & searches) and carries forward to graphs/trees.
 - **Complexity overlay** — live-plot actual comparisons/operations against theoretical Big-O curve as it runs. Turns your existing stat counters into a teaching tool instead of a scoreboard.
 - **Preset input types** — nearly-sorted, reversed, few-unique, all-same (for sorting); sparse/dense, negative-weight, disconnected (for graphs). Cheapest way to teach best/worst-case behavior — it's config, not architecture.
 - **Undo / step-back** — you're already stepping forward; snapshotting state for backward stepping is a moderate lift with high UX payoff.
 - **Shareable run state** — URL param or JSON export of `{algorithm, input, speed, language}`. Lets a teacher link a specific case to a class.
 - **Pseudocode-synced highlighting** — show canonical pseudocode alongside the running visualization, highlight the active line as it executes. Very common ask in every review of these tools; ties the user's code back to the "textbook" version.
-- **Dark/light theme + colorblind-safe palette toggle** — cheap, matters for an educational tool.
+- **Dark/light theme + colorblind-safe palette toggle + musical mode** — cheap UX wins, matters for an educational tool.
 
 ---
 

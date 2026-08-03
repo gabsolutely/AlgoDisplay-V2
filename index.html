@@ -83,11 +83,25 @@
                         <label for="target-input">Target:</label>
                         <input type="number" id="target-input" value="50" class="btn" style="width:80px;">
                     </div>
+                    <div class="control-group search-only" style="display:none;">
+                        <label for="search-sort-toggle" class="toggle-label">
+                            <input type="checkbox" id="search-sort-toggle" checked>
+                            <span class="toggle-slider"></span>
+                            Pre-Sort Array
+                        </label>
+                    </div>
                     <div class="control-group">
                         <label for="sound-toggle" class="toggle-label">
                             <input type="checkbox" id="sound-toggle" checked>
                             <span class="toggle-slider"></span>
                             Sound
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label for="musical-toggle" class="toggle-label">
+                            <input type="checkbox" id="musical-toggle">
+                            <span class="toggle-slider"></span>
+                            🎵 Musical
                         </label>
                     </div>
                     <div class="control-group">
@@ -115,10 +129,11 @@
                     <div class="help-section">
                         <h4>JavaScript</h4>
                         <pre><code>// Use these functions:
-await compare(i, j)    // Red glow - compares elements
-await swap(arr, i, j) // Orange glow - swaps elements  
-await renderArray(arr)  // Updates display
-log("message")         // Shows in log</code></pre>
+await compare(i, j)      // Red glow - compares elements
+await swap(arr, i, j)    // Orange glow - swaps elements
+await renderArray(arr)   // Updates display
+await markFound(index)   // Green glow - match found!
+log("message")           // Shows in log</code></pre>
                     </div>
                     
                     <div class="help-section">
@@ -126,10 +141,11 @@ log("message")         // Shows in log</code></pre>
                         <pre><code># Must define this function:
 async def sort(arr):
     # Use these functions:
-    await compare(i, j)    # Red glow
-    await swap(arr, i, j) # Orange glow
-    await render_array(arr)  # Updates display
-    log("message")         # Shows in log</code></pre>
+    await compare(i, j)       # Red glow
+    await swap(arr, i, j)     # Orange glow
+    await render_array(arr)   # Updates display
+    await mark_found(index)   # Green glow - match!
+    log("message")            # Shows in log</code></pre>
                     </div>
                     
                     <div class="help-section">
@@ -150,7 +166,7 @@ for (let i = 0; i < arr.length - 1; i++) {
                         <div class="color-item">🔵 Blue - Normal</div>
                         <div class="color-item">🔴 Red - Comparing</div>
                         <div class="color-item">🟠 Orange - Swapping</div>
-                        <div class="color-item">🟢 Green - Sorted</div>
+                        <div class="color-item">🟢 Green - Sorted / Found</div>
                     </div>
                 </div>
             </section>
