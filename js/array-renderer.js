@@ -80,6 +80,19 @@ class ArrayRenderer {
       this.bars[index].classList.add('active');
     }
   }
+
+  markFound(index) {
+    if (this.bars[index]) {
+      this.bars[index].classList.add('comparing');
+      this.bars[index].classList.add('swapping');
+      this.bars[index].style.background =
+        'linear-gradient(135deg, #8b5cf6, #ec4899) !important';
+      this.bars[index].style.boxShadow =
+        '0 0 25px rgba(139, 92, 246, 0.9), 0 0 40px rgba(236, 72, 153, 0.6)';
+      this.bars[index].style.zIndex = '20';
+      this.bars[index].style.transform = 'translateY(-6px) scale(1.05)';
+    }
+  }
   
   async animatedSwap(array, i, j, duration = 100) {
     if (!this.bars[i] || !this.bars[j] || i === j) return;

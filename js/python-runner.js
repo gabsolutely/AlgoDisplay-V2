@@ -26,19 +26,37 @@ class PythonRunner {
     }
   }
   
-  async run(code, array, api, shouldStopFlag) {
+  async run(code, array, api, shouldStopFlag, options = {}) {
     if (!this.isReady) {
       throw new Error("Python not ready");
     }
-    
+
     this.stopExecution();
-    
+
     try {
+      const category = options.category || "sort";
+      const target = options.target ?? null;
+      const searchSortedRequires = options.searchSortedRequires === true;
+
+      const callLine = category === "search"
+        ? `result = await search(arr, target)`
+        : `result = await sort(arr)`;
+
+      const targetLine = category === "search"
+        ? `target = ${JSON.stringify(target)}`
+        : `# no target needed`;
+
+      const preSort = (category === "search" && searchSortedRequires)
+        ? `arr.sort()
+await _renderArray(list(arr))`
+        : `# no pre-sort`;
+
       const fullCode = `
 import asyncio
 
 # Global array
 arr = ${JSON.stringify(array)}
+${targetLine}
 
 # Stop condition checker
 def _check_stop():
@@ -63,6 +81,11 @@ async def swap(arr, i, j):
     for idx, val in enumerate(js_arr):
         arr[idx] = val
 
+async def mark_found(index):
+    if _check_stop():
+        return
+    await _markFound(index)
+
 def log(msg):
     if not _check_stop():
         _log(str(msg))
@@ -80,33 +103,28 @@ ${code}
 
 # Execute
 if not _check_stop():
-    result = await sort(arr)
-    # Ensure we return the final array state
-    if result is not None:
-        arr = result
-    # Final render to ensure array is displayed
+    ${preSort}
+    ${callLine}
     await _renderArray(list(arr))
 else:
     result = arr
 
-# Return the final array
 arr
 `;
-      
-      // Set API functions
+
+      if (api.markFound) this.pyodide.globals.set("_markFound", api.markFound);
       this.pyodide.globals.set("_compare", api.compare);
       this.pyodide.globals.set("_renderArray", api.renderArray);
       this.pyodide.globals.set("_swap", api.swap);
       this.pyodide.globals.set("_log", api.log);
       this.pyodide.globals.set("_shouldStop", shouldStopFlag);
-      
-      // Execute
+
       this.currentExecution = this.pyodide.runPythonAsync(fullCode);
       const result = await this.currentExecution;
       this.currentExecution = null;
-      
+
       return result.toJs ? result.toJs() : result;
-      
+
     } catch (error) {
       this.currentExecution = null;
       throw new Error(`Python error: ${error.message}`);
