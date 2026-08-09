@@ -301,6 +301,3 @@ class SoundManager {
     this.enabled = enabled;
   }
 }
-
-
-

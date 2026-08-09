@@ -101,6 +101,8 @@ class AlgorithmVisualizer {
       nearlySwapsVal: document.getElementById("nearly-swaps-val"),
       nearlySpreadSlider: document.getElementById("nearly-spread"),
       nearlySpreadVal: document.getElementById("nearly-spread-val"),
+      shareBtn: document.getElementById("share-btn"),
+      complexityBtn: document.getElementById("complexity-btn"),
     };
     
     console.log("Elements found:", this.validateElements());
@@ -375,6 +377,17 @@ class AlgorithmVisualizer {
         }
       }
     });
+
+    if (this.elements.shareBtn) {
+      this.elements.shareBtn.onclick = () => this.shareState();
+    }
+
+    if (this.elements.complexityBtn) {
+      this.elements.complexityBtn.onclick = () => {
+        if (!this.complexityOverlay) this.initComplexityOverlay();
+        this.complexityOverlay.classList.toggle('visible');
+      };
+    }
   }
 
   refreshAlgorithmOptions() {
@@ -1379,6 +1392,7 @@ async def search(arr, target):
     this.statsB.swaps = 0;
     this.statsB.steps = 0;
     this.updateStats();
+    this.showComplexityOverlay();
 
     this.elements.runBtn.style.display = "none";
     this.elements.pauseBtn.style.display = "inline-block";
@@ -1590,6 +1604,7 @@ async def search(arr, target):
         statsObj.comparisons++;
         statsObj.steps++;
         this.updateStats();
+        this.updateComplexityData();
         this.log(`${tag} Comparing indices ${i} and ${j}`);
         if (isA) this.updateOperationInfo(`A: Comparing ${i},${j}`);
         const arr = getArr();
@@ -1608,6 +1623,7 @@ async def search(arr, target):
         statsObj.swaps++;
         statsObj.steps++;
         this.updateStats();
+        this.updateComplexityData();
         this.log(`${tag} Swapping indices ${i} and ${j}`);
         if (isA) this.updateOperationInfo(`${tag} Swapping ${i},${j}`);
         await renderer.animatedSwap(arrRef, i, j, this.speed);

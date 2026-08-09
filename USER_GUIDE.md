@@ -221,6 +221,10 @@ Turn algorithm visualization into a live music session:
 - **Pitch Transpose**: Transpose octave range (`Bass Low`, `Mid Normal`, `Lead High`, `Chimes Ultra`).
 - **🎵 Jam Button**: Audition a live producer melody groove matching your active kit!
 
+### 🔗 Shareable Run State & 📊 Complexity Overlay
+- **Shareable State**: Click **🔗 Share** in the toolbar to copy a URL encoding your active category, language, algorithm, speed, array size, preset, and race mode config to share with others!
+- **Complexity Overlay**: Click **📊** to toggle a live plot comparing actual operations (comparisons + swaps) against theoretical Big-O curves (e.g. \(O(n \log n)\), \(O(n^2)\)) during algorithm execution.
+
 ## File Structure
 
 If you want to modify or extend the application:
