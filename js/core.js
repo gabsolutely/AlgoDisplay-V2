@@ -71,7 +71,6 @@ class AlgorithmVisualizer {
       waveformSelect: document.getElementById("waveform-select"),
       scaleSelect: document.getElementById("scale-select"),
       octaveSelect: document.getElementById("octave-select"),
-      echoToggle: document.getElementById("echo-toggle"),
       volumeRange: document.getElementById("volume-range"),
       volumeVal: document.getElementById("volume-val"),
       producerJamBtn: document.getElementById("producer-jam-btn"),
@@ -124,9 +123,13 @@ class AlgorithmVisualizer {
   
   async init() {
     console.log("AlgoDisplay initializing...");
-    this.setExampleCode();
-    this.generateArray();
     this.setupEventListeners();
+    const loadedFromURL = this.loadFromURL();
+    if (!loadedFromURL) {
+      this.setExampleCode();
+      this.generateArray();
+    }
+    this.initComplexityOverlay();
     console.log("AlgoDisplay ready");
   }
   
@@ -1781,6 +1784,304 @@ async def search(arr, target):
       }
     };
     this.elements.actionControls.appendChild(nextBtn);
+  }
+
+  // ─── Shareable Run State ───────────────────────────────────
+  encodeState() {
+    const params = new URLSearchParams();
+    params.set('cat', this.currentCategory);
+    params.set('algo', this.currentAlgorithm);
+    params.set('lang', this.currentLanguage);
+    params.set('speed', this.speed);
+    if (this.elements.arraySizeInput) params.set('size', this.elements.arraySizeInput.value);
+    if (this.elements.presetSelect) params.set('preset', this.elements.presetSelect.value);
+    if (this.raceMode) {
+      params.set('race', '1');
+      params.set('algoB', this.currentAlgorithmB);
+    }
+    if (this.currentCategory === 'search' && this.searchTarget != null) {
+      params.set('target', this.searchTarget);
+    }
+    if (this.elements.themeToggle && this.elements.themeToggle.checked) params.set('theme', 'light');
+    if (this.elements.paletteToggle && this.elements.paletteToggle.checked) params.set('cb', '1');
+    return window.location.origin + window.location.pathname + '?' + params.toString();
+  }
+
+  loadFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.size === 0) return false;
+
+    // Category
+    if (params.has('cat')) {
+      this.currentCategory = params.get('cat');
+      if (this.elements.categorySelect) this.elements.categorySelect.value = this.currentCategory;
+      this.refreshAlgorithmOptions();
+    }
+    // Algorithm
+    if (params.has('algo')) {
+      this.currentAlgorithm = params.get('algo');
+      if (this.elements.algorithmSelect) this.elements.algorithmSelect.value = this.currentAlgorithm;
+    }
+    // Language
+    if (params.has('lang')) {
+      this.currentLanguage = params.get('lang');
+      if (this.elements.languageSelect) this.elements.languageSelect.value = this.currentLanguage;
+    }
+    // Speed
+    if (params.has('speed')) {
+      this.speed = parseInt(params.get('speed')) || 300;
+      if (this.elements.speedSlider) this.elements.speedSlider.value = this.speed;
+      if (this.elements.speedValue) this.elements.speedValue.textContent = this.speed + 'ms';
+    }
+    // Array size
+    if (params.has('size') && this.elements.arraySizeInput) {
+      this.elements.arraySizeInput.value = params.get('size');
+    }
+    // Preset
+    if (params.has('preset') && this.elements.presetSelect) {
+      this.elements.presetSelect.value = params.get('preset');
+      this.elements.presetSelect.dispatchEvent(new Event('change'));
+    }
+    // Race mode
+    if (params.get('race') === '1') {
+      this.raceMode = true;
+      if (this.elements.raceToggle) {
+        this.elements.raceToggle.checked = true;
+        this.elements.raceToggle.dispatchEvent(new Event('change'));
+      }
+      if (params.has('algoB') && this.elements.algorithmSelectB) {
+        this.currentAlgorithmB = params.get('algoB');
+        this.elements.algorithmSelectB.value = this.currentAlgorithmB;
+      }
+    }
+    // Search target
+    if (params.has('target')) {
+      this.searchTarget = parseInt(params.get('target'));
+      if (this.elements.targetInput) this.elements.targetInput.value = this.searchTarget;
+    }
+    // Theme
+    if (params.get('theme') === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      if (this.elements.themeToggle) this.elements.themeToggle.checked = true;
+    }
+    // Colorblind
+    if (params.get('cb') === '1') {
+      document.documentElement.setAttribute('data-palette', 'colorblind');
+      if (this.elements.paletteToggle) this.elements.paletteToggle.checked = true;
+    }
+
+    this.setExampleCode();
+    this.generateArray();
+    this.log('📎 State loaded from shared URL');
+    return true;
+  }
+
+  shareState() {
+    const url = this.encodeState();
+    navigator.clipboard.writeText(url).then(() => {
+      this.showToast('🔗 Share URL copied to clipboard!');
+      this.log('Shareable URL copied: ' + url);
+    }).catch(() => {
+      // Fallback for non-HTTPS
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      this.showToast('🔗 Share URL copied to clipboard!');
+      this.log('Shareable URL copied: ' + url);
+    });
+  }
+
+  showToast(message) {
+    const existing = document.querySelector('.toast-notification');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  // ─── Complexity Overlay ────────────────────────────────────
+  getTheoreticalComplexity(algo) {
+    const n = this.array.length;
+    const complexities = {
+      // Sorting
+      bubble:    { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      selection: { best: 'O(n²)',     avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      insertion: { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      merge:     { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', fn: x => x * Math.log2(x) },
+      quick:     { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n²)',     fn: x => x * Math.log2(x) },
+      heap:      { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', fn: x => x * Math.log2(x) },
+      shell:     { best: 'O(n log n)', avg: 'O(n^1.3)',  worst: 'O(n²)',     fn: x => x * Math.pow(Math.log2(x), 2) },
+      cocktail:  { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      counting:  { best: 'O(n+k)',    avg: 'O(n+k)',    worst: 'O(n+k)',    fn: x => x * 2 },
+      radix:     { best: 'O(nk)',     avg: 'O(nk)',     worst: 'O(nk)',     fn: x => x * 3 },
+      // Searching
+      linear:        { best: 'O(1)', avg: 'O(n)',       worst: 'O(n)',       fn: x => x },
+      binary:        { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+      interpolation: { best: 'O(1)', avg: 'O(log log n)', worst: 'O(n)',    fn: x => Math.log2(Math.log2(x) || 1) || 1 },
+      exponential:   { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+      ternary:       { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+    };
+    return complexities[algo] || complexities.bubble;
+  }
+
+  initComplexityOverlay() {
+    const existing = document.getElementById('complexity-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'complexity-overlay';
+    overlay.innerHTML = `
+      <div class="complexity-header">
+        <span class="complexity-title">📊 Complexity</span>
+        <button class="complexity-close" title="Close">✕</button>
+      </div>
+      <canvas id="complexity-canvas" width="280" height="160"></canvas>
+      <div class="complexity-legend" id="complexity-legend"></div>
+    `;
+    
+    const vizSection = document.querySelector('.visualization-section');
+    if (vizSection) vizSection.appendChild(overlay);
+
+    overlay.querySelector('.complexity-close').onclick = () => {
+      overlay.classList.remove('visible');
+    };
+
+    this.complexityCanvas = document.getElementById('complexity-canvas');
+    this.complexityCtx = this.complexityCanvas ? this.complexityCanvas.getContext('2d') : null;
+    this.complexityOverlay = overlay;
+  }
+
+  showComplexityOverlay() {
+    if (!this.complexityOverlay) this.initComplexityOverlay();
+    this.complexityOverlay.classList.add('visible');
+    this.complexityDataA = [];
+    this.complexityDataB = [];
+    this.renderComplexityChart();
+  }
+
+  hideComplexityOverlay() {
+    if (this.complexityOverlay) this.complexityOverlay.classList.remove('visible');
+  }
+
+  updateComplexityData() {
+    if (!this.complexityCanvas || !this.complexityOverlay?.classList.contains('visible')) return;
+    this.complexityDataA.push(this.stats.comparisons + this.stats.swaps);
+    if (this.raceMode) {
+      this.complexityDataB.push(this.statsB.comparisons + this.statsB.swaps);
+    }
+    this.renderComplexityChart();
+  }
+
+  renderComplexityChart() {
+    const ctx = this.complexityCtx;
+    if (!ctx) return;
+    const canvas = this.complexityCanvas;
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 8, right: 8, bottom: 20, left: 40 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const n = this.array.length || 20;
+    const complexity = this.getTheoreticalComplexity(this.currentAlgorithm);
+    const theoreticalMax = complexity.fn(n);
+    const actualMax = Math.max(
+      theoreticalMax,
+      ...this.complexityDataA,
+      ...(this.complexityDataB || []),
+      1
+    );
+
+    const totalSteps = Math.max(this.complexityDataA.length, 1);
+
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (plotH * i / 4);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    }
+
+    // Theoretical curve
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    for (let i = 0; i <= plotW; i++) {
+      const progress = i / plotW;
+      const curN = Math.max(1, Math.floor(progress * n));
+      const val = complexity.fn(curN);
+      const x = pad.left + i;
+      const y = pad.top + plotH - (val / actualMax) * plotH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Actual operations curve — Side A
+    if (this.complexityDataA.length > 1) {
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < this.complexityDataA.length; i++) {
+        const x = pad.left + (i / (totalSteps - 1 || 1)) * plotW;
+        const y = pad.top + plotH - (this.complexityDataA[i] / actualMax) * plotH;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Actual operations curve — Side B (race mode)
+    if (this.raceMode && this.complexityDataB.length > 1) {
+      ctx.strokeStyle = '#a78bfa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < this.complexityDataB.length; i++) {
+        const x = pad.left + (i / (totalSteps - 1 || 1)) * plotW;
+        const y = pad.top + plotH - (this.complexityDataB[i] / actualMax) * plotH;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Steps →', pad.left + plotW / 2, H - 2);
+    ctx.save();
+    ctx.translate(10, pad.top + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Ops', 0, 0);
+    ctx.restore();
+
+    // Y-axis scale
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(actualMax).toString(), pad.left - 4, pad.top + 8);
+    ctx.fillText('0', pad.left - 4, pad.top + plotH + 4);
+
+    // Legend
+    const legend = document.getElementById('complexity-legend');
+    if (legend) {
+      const algoName = this.elements.algorithmSelect?.selectedOptions?.[0]?.textContent || this.currentAlgorithm;
+      let html = `<span class="legend-item"><span class="legend-dot" style="background: var(--accent)"></span>${algoName}</span>`;
+      html += `<span class="legend-item"><span class="legend-line-dashed"></span>${complexity.avg}</span>`;
+      if (this.raceMode) {
+        const algoBName = this.elements.algorithmSelectB?.selectedOptions?.[0]?.textContent || this.currentAlgorithmB;
+        html += `<span class="legend-item"><span class="legend-dot" style="background: #a78bfa"></span>${algoBName}</span>`;
+      }
+      legend.innerHTML = html;
+    }
   }
 }
 
