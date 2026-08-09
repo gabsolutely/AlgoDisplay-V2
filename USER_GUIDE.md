@@ -213,11 +213,13 @@ You can adjust the array size from 5 to 50 elements. Larger arrays:
 - May require higher speed settings
 - Provide better visualization of algorithm behavior
 
-### Sound Effects
-Toggle sound effects to get audio feedback for:
-- Comparisons (high pitch)
-- Swaps (medium pitch)
-- Algorithm completion (ascending tone)
+### Beat Producer Sound Suite & Controls
+Turn algorithm visualization into a live music session:
+- **Producer Kits**: Instant preset sound environments (`👾 8-Bit`, `🎷 Lo-Fi`, `🌴 Marimba`, `🌌 Synthwave`, `📻 Sci-Fi`, `🎹 Organ`).
+- **Synth Sounds**: Pick custom wave synthesis (`Triangle`, `Sine`, `Square 8-Bit`, `Sawtooth Cyber Lead`, `Additive Organ`, `Marimba Percussive Pluck`, `Sci-Fi FM Laser Sweep`).
+- **Scales**: Select tunings (`Pentatonic`, `Major`, `Minor`, `Blues`, `Dorian`, `Harmonic Minor`, `Japanese InSen`, `Chromatic`).
+- **Pitch Transpose**: Transpose octave range (`Bass Low`, `Mid Normal`, `Lead High`, `Chimes Ultra`).
+- **🎵 Jam Button**: Audition a live producer melody groove matching your active kit!
 
 ## File Structure
 

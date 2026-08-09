@@ -38,124 +38,194 @@
         <main class="main">
             <section class="editor-section">
                 <div class="editor-controls">
-                    <div class="control-group">
-                        <label for="category-select">Category:</label>
-                        <select id="category-select" class="btn btn-primary">
-                            <option value="sort">Sorting</option>
-                            <option value="search">Searching</option>
-                        </select>
+                    <!-- Panel 1: Code & Data -->
+                    <div class="toolbar-card">
+                        <div class="card-title">⚙️ Code & Data</div>
+                        <div class="card-controls">
+                            <div class="control-group">
+                                <label for="category-select">Category:</label>
+                                <select id="category-select" class="btn btn-primary">
+                                    <option value="sort">Sorting</option>
+                                    <option value="search">Searching</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="language-select">Language:</label>
+                                <select id="language-select" class="btn btn-primary">
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="python">Python</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="algorithm-select">Algorithm:</label>
+                                <select id="algorithm-select" class="btn btn-primary">
+                                    <option value="bubble">Bubble Sort</option>
+                                    <option value="selection">Selection Sort</option>
+                                    <option value="insertion">Insertion Sort</option>
+                                    <option value="merge">Merge Sort</option>
+                                    <option value="quick">Quick Sort</option>
+                                    <option value="heap">Heap Sort</option>
+                                    <option value="shell">Shell Sort</option>
+                                    <option value="cocktail">Cocktail Shaker</option>
+                                    <option value="counting">Counting Sort</option>
+                                    <option value="radix">Radix Sort (LSD)</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="preset-select">Preset:</label>
+                                <select id="preset-select" class="btn btn-primary">
+                                    <option value="random">Random</option>
+                                    <option value="nearly-sorted">Nearly Sorted</option>
+                                    <option value="reversed">Reversed</option>
+                                    <option value="few-unique">Few Unique</option>
+                                    <option value="all-same">All Same</option>
+                                    <option value="custom">Custom Array…</option>
+                                </select>
+                            </div>
+                            <div class="control-group nearly-sorted-only" style="display:none;">
+                                <label for="nearly-swaps">Swaps %: <span id="nearly-swaps-val">30%</span></label>
+                                <input type="range" id="nearly-swaps" min="3" max="60" value="30" style="width:100px;">
+                            </div>
+                            <div class="control-group nearly-sorted-only" style="display:none;">
+                                <label for="nearly-spread">Spread %: <span id="nearly-spread-val">25%</span></label>
+                                <input type="range" id="nearly-spread" min="5" max="50" value="25" style="width:100px;">
+                            </div>
+                            <div class="control-group custom-only" style="display:none; width: 100%;">
+                                <textarea id="custom-array" class="btn" style="width:100%;min-height:48px;resize:vertical;" placeholder="e.g. 5, 3, 8, 1, 9, 2, 7, 4"></textarea>
+                            </div>
+                            <div class="control-group">
+                                <label for="array-size">Size:</label>
+                                <input type="number" id="array-size" min="5" max="50" value="20" class="btn" style="width:70px;">
+                            </div>
+                            <div class="control-group search-only" style="display:none;">
+                                <label for="target-input">Target:</label>
+                                <input type="number" id="target-input" value="50" class="btn" style="width:70px;">
+                            </div>
+                            <div class="control-group search-only" style="display:none;">
+                                <label for="search-sort-toggle" class="toggle-label">
+                                    <input type="checkbox" id="search-sort-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                    Pre-Sort
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <div class="control-group">
-                        <label for="language-select">Language:</label>
-                        <select id="language-select" class="btn btn-primary">
-                            <option value="javascript">JavaScript</option>
-                            <option value="python">Python</option>
-                        </select>
+
+                    <!-- Panel 2: Sound Studio -->
+                    <div class="toolbar-card">
+                        <div class="card-title">🎵 Sound Studio</div>
+                        <div class="card-controls">
+                            <div class="control-group">
+                                <label for="sound-toggle" class="toggle-label">
+                                    <input type="checkbox" id="sound-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                    Sound
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label for="musical-toggle" class="toggle-label">
+                                    <input type="checkbox" id="musical-toggle">
+                                    <span class="toggle-slider"></span>
+                                    Musical
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label for="producer-kit-select">Kit:</label>
+                                <select id="producer-kit-select" class="btn btn-primary">
+                                    <option value="default">Default</option>
+                                    <option value="chiptune">👾 8-Bit</option>
+                                    <option value="lofi">🎷 Lo-Fi</option>
+                                    <option value="marimba">🌴 Marimba</option>
+                                    <option value="synthwave">🌌 Synthwave</option>
+                                    <option value="scifi">📻 Sci-Fi</option>
+                                    <option value="organ">🎹 Organ</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="waveform-select">Synth:</label>
+                                <select id="waveform-select" class="btn btn-primary">
+                                    <option value="triangle">Triangle</option>
+                                    <option value="sine">Sine</option>
+                                    <option value="square">Square 8-Bit</option>
+                                    <option value="sawtooth">Sawtooth Lead</option>
+                                    <option value="organ">Organ</option>
+                                    <option value="marimba">Marimba</option>
+                                    <option value="fm_laser">FM Laser</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="scale-select">Scale:</label>
+                                <select id="scale-select" class="btn btn-primary">
+                                    <option value="pentatonic">Pentatonic</option>
+                                    <option value="major">Major</option>
+                                    <option value="minor">Minor</option>
+                                    <option value="blues">Blues</option>
+                                    <option value="dorian">Dorian</option>
+                                    <option value="harmonic_minor">Harmonic Minor</option>
+                                    <option value="insen">Japanese InSen</option>
+                                    <option value="chromatic">Chromatic</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="octave-select">Pitch:</label>
+                                <select id="octave-select" class="btn btn-primary">
+                                    <option value="low">Bass (Low)</option>
+                                    <option value="normal" selected>Mid (Normal)</option>
+                                    <option value="high">Lead (High)</option>
+                                    <option value="ultra">Chimes (Ultra)</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="volume-range">Vol: <span id="volume-val">30%</span></label>
+                                <input type="range" id="volume-range" min="0" max="100" value="30" style="width:75px;">
+                            </div>
+                            <button id="producer-jam-btn" class="btn btn-warning" title="Audition Sound">🎵 Jam</button>
+                        </div>
                     </div>
-                    <div class="control-group">
-                        <label for="algorithm-select">Algorithm:</label>
-                        <select id="algorithm-select" class="btn btn-primary">
-                            <option value="bubble">Bubble Sort</option>
-                            <option value="selection">Selection Sort</option>
-                            <option value="insertion">Insertion Sort</option>
-                            <option value="merge">Merge Sort</option>
-                            <option value="quick">Quick Sort</option>
-                            <option value="heap">Heap Sort</option>
-                            <option value="shell">Shell Sort</option>
-                            <option value="cocktail">Cocktail Shaker</option>
-                            <option value="counting">Counting Sort</option>
-                            <option value="radix">Radix Sort (LSD)</option>
-                        </select>
+
+                    <!-- Panel 3: Race & View Options -->
+                    <div class="toolbar-card">
+                        <div class="card-title">🏎️ Mode & View</div>
+                        <div class="card-controls">
+                            <div class="control-group">
+                                <label for="race-toggle" class="toggle-label">
+                                    <input type="checkbox" id="race-toggle">
+                                    <span class="toggle-slider"></span>
+                                    Race Mode
+                                </label>
+                            </div>
+                            <div class="control-group race-only" style="display:none;">
+                                <label for="algorithm-select-b">Vs:</label>
+                                <select id="algorithm-select-b" class="btn btn-primary">
+                                    <option value="bubble">Bubble Sort</option>
+                                    <option value="selection">Selection Sort</option>
+                                    <option value="insertion">Insertion Sort</option>
+                                    <option value="merge">Merge Sort</option>
+                                    <option value="quick">Quick Sort</option>
+                                    <option value="heap">Heap Sort</option>
+                                    <option value="shell">Shell Sort</option>
+                                    <option value="cocktail">Cocktail Shaker</option>
+                                    <option value="counting">Counting Sort</option>
+                                    <option value="radix">Radix Sort (LSD)</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label for="theme-toggle" class="toggle-label">
+                                    <input type="checkbox" id="theme-toggle">
+                                    <span class="toggle-slider"></span>
+                                    Light
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label for="palette-toggle" class="toggle-label">
+                                    <input type="checkbox" id="palette-toggle">
+                                    <span class="toggle-slider"></span>
+                                    Colorblind
+                                </label>
+                            </div>
+                            <button id="help-btn" class="btn btn-secondary" title="Help">?</button>
+                        </div>
                     </div>
-                    <div class="control-group">
-                        <label for="preset-select">Preset:</label>
-                        <select id="preset-select" class="btn btn-primary">
-                            <option value="random">Random</option>
-                            <option value="nearly-sorted">Nearly Sorted</option>
-                            <option value="reversed">Reversed</option>
-                            <option value="few-unique">Few Unique</option>
-                            <option value="all-same">All Same</option>
-                            <option value="custom">Custom Array…</option>
-                        </select>
-                    </div>
-                    <div class="control-group nearly-sorted-only" style="display:none;">
-                        <label for="nearly-swaps">Swaps %: <span id="nearly-swaps-val">30%</span></label>
-                        <input type="range" id="nearly-swaps" min="3" max="60" value="30" style="width:140px;">
-                    </div>
-                    <div class="control-group nearly-sorted-only" style="display:none;">
-                        <label for="nearly-spread">Spread %: <span id="nearly-spread-val">25%</span></label>
-                        <input type="range" id="nearly-spread" min="5" max="50" value="25" style="width:140px;">
-                    </div>
-                    <div class="control-group custom-only" style="display:none;">
-                        <label for="custom-array">Custom Array (comma-separated):</label>
-                        <textarea id="custom-array" class="btn" style="width:100%;min-height:52px;resize:vertical;" placeholder="e.g. 5, 3, 8, 1, 9, 2, 7, 4"></textarea>
-                    </div>
-                    <div class="control-group">
-                        <label for="array-size">Array Size:</label>
-                        <input type="number" id="array-size" min="5" max="50" value="20" class="btn">
-                    </div>
-                    <div class="control-group search-only" style="display:none;">
-                        <label for="target-input">Target:</label>
-                        <input type="number" id="target-input" value="50" class="btn" style="width:80px;">
-                    </div>
-                    <div class="control-group search-only" style="display:none;">
-                        <label for="search-sort-toggle" class="toggle-label">
-                            <input type="checkbox" id="search-sort-toggle" checked>
-                            <span class="toggle-slider"></span>
-                            Pre-Sort Array
-                        </label>
-                    </div>
-                    <div class="control-group">
-                        <label for="sound-toggle" class="toggle-label">
-                            <input type="checkbox" id="sound-toggle" checked>
-                            <span class="toggle-slider"></span>
-                            Sound
-                        </label>
-                    </div>
-                    <div class="control-group">
-                        <label for="musical-toggle" class="toggle-label">
-                            <input type="checkbox" id="musical-toggle">
-                            <span class="toggle-slider"></span>
-                            Musical
-                        </label>
-                    </div>
-                    <div class="control-group">
-                        <label for="race-toggle" class="toggle-label">
-                            <input type="checkbox" id="race-toggle">
-                            <span class="toggle-slider"></span>
-                            Race Mode
-                        </label>
-                    </div>
-                    <div class="control-group race-only" style="display:none;">
-                        <label for="algorithm-select-b">Vs:</label>
-                        <select id="algorithm-select-b" class="btn btn-primary">
-                            <option value="bubble">Bubble Sort</option>
-                            <option value="selection">Selection Sort</option>
-                            <option value="insertion">Insertion Sort</option>
-                            <option value="merge">Merge Sort</option>
-                            <option value="quick">Quick Sort</option>
-                            <option value="heap">Heap Sort</option>
-                            <option value="shell">Shell Sort</option>
-                            <option value="cocktail">Cocktail Shaker</option>
-                            <option value="counting">Counting Sort</option>
-                            <option value="radix">Radix Sort (LSD)</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label for="theme-toggle" class="toggle-label">
-                            <input type="checkbox" id="theme-toggle">
-                            <span class="toggle-slider"></span>
-                            Light
-                        </label>
-                    </div>
-                    <div class="control-group">
-                        <label for="palette-toggle" class="toggle-label">
-                            <input type="checkbox" id="palette-toggle">
-                            <span class="toggle-slider"></span>
-                            Colorblind
-                        </label>
-                    </div>
-                    <button id="help-btn" class="btn btn-secondary">?</button>
                 </div>
                 <div class="editor-container">
                     <textarea id="code-editor" class="code-editor" placeholder="Write your sorting algorithm here..."></textarea>

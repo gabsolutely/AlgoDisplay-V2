@@ -67,6 +67,14 @@ class AlgorithmVisualizer {
       searchSortToggle: document.getElementById("search-sort-toggle"),
       soundToggle: document.getElementById("sound-toggle"),
       musicalToggle: document.getElementById("musical-toggle"),
+      producerKitSelect: document.getElementById("producer-kit-select"),
+      waveformSelect: document.getElementById("waveform-select"),
+      scaleSelect: document.getElementById("scale-select"),
+      octaveSelect: document.getElementById("octave-select"),
+      echoToggle: document.getElementById("echo-toggle"),
+      volumeRange: document.getElementById("volume-range"),
+      volumeVal: document.getElementById("volume-val"),
+      producerJamBtn: document.getElementById("producer-jam-btn"),
       themeToggle: document.getElementById("theme-toggle"),
       paletteToggle: document.getElementById("palette-toggle"),
       editor: document.getElementById("code-editor"),
@@ -186,6 +194,61 @@ class AlgorithmVisualizer {
         this.musicalMode = this.elements.musicalToggle.checked;
         this.sounds.setMusicalMode(this.musicalMode);
         this.log("Musical mode: " + (this.musicalMode ? "ON" : "OFF"));
+      };
+    }
+
+    if (this.elements.producerKitSelect) {
+      this.elements.producerKitSelect.onchange = () => {
+        const kitName = this.elements.producerKitSelect.value;
+        const kit = this.sounds.setProducerKit(kitName);
+        if (kit) {
+          if (this.elements.waveformSelect) this.elements.waveformSelect.value = kit.wave;
+          if (this.elements.scaleSelect) this.elements.scaleSelect.value = kit.scale;
+          if (this.elements.octaveSelect) this.elements.octaveSelect.value = kit.octave;
+          this.log("Producer Kit Loaded: " + kitName.toUpperCase());
+          this.sounds.playProducerDemo();
+        }
+      };
+    }
+
+    if (this.elements.waveformSelect) {
+      this.elements.waveformSelect.onchange = () => {
+        this.sounds.setWaveform(this.elements.waveformSelect.value);
+        if (this.elements.producerKitSelect) this.elements.producerKitSelect.value = "default";
+        this.log("Synth Sound: " + this.elements.waveformSelect.value);
+      };
+    }
+
+    if (this.elements.scaleSelect) {
+      this.elements.scaleSelect.onchange = () => {
+        this.sounds.setScale(this.elements.scaleSelect.value);
+        if (this.elements.producerKitSelect) this.elements.producerKitSelect.value = "default";
+        this.log("Scale: " + this.elements.scaleSelect.value);
+      };
+    }
+
+    if (this.elements.octaveSelect) {
+      this.elements.octaveSelect.onchange = () => {
+        this.sounds.setOctave(this.elements.octaveSelect.value);
+        if (this.elements.producerKitSelect) this.elements.producerKitSelect.value = "default";
+        this.log("Pitch Transpose: " + this.elements.octaveSelect.value);
+      };
+    }
+
+    if (this.elements.volumeRange) {
+      const updateVolume = () => {
+        const volVal = parseInt(this.elements.volumeRange.value) || 0;
+        if (this.elements.volumeVal) this.elements.volumeVal.textContent = volVal + "%";
+        this.sounds.setVolume(volVal / 100);
+      };
+      this.elements.volumeRange.addEventListener('input', updateVolume);
+      this.elements.volumeRange.addEventListener('change', updateVolume);
+      updateVolume();
+    }
+
+    if (this.elements.producerJamBtn) {
+      this.elements.producerJamBtn.onclick = () => {
+        this.sounds.playProducerDemo();
       };
     }
 
@@ -1080,9 +1143,9 @@ async def search(arr, target):
     this.elements.statSwaps.textContent = this.stats.swaps;
     this.elements.statSteps.textContent = this.stats.steps;
     
-    if (this.stats.endTime > 0) {
-      const elapsed = this.stats.endTime - this.stats.startTime;
-      this.elements.statTime.textContent = elapsed + "ms";
+    if (this.stats.startTime > 0) {
+      const elapsed = (this.stats.endTime > 0 ? this.stats.endTime : Date.now()) - this.stats.startTime;
+      this.elements.statTime.textContent = Math.max(0, elapsed) + "ms";
     }
 
     if (this.raceMode && this.elements.statSizeB) {
@@ -1090,9 +1153,9 @@ async def search(arr, target):
       this.elements.statComparisonsB.textContent = this.statsB.comparisons;
       this.elements.statSwapsB.textContent = this.statsB.swaps;
       this.elements.statStepsB.textContent = this.statsB.steps;
-      if (this.statsB.endTime > 0) {
-        const elapsed = this.statsB.endTime - this.statsB.startTime;
-        this.elements.statTimeB.textContent = elapsed + "ms";
+      if (this.statsB.startTime > 0) {
+        const elapsed = (this.statsB.endTime > 0 ? this.statsB.endTime : Date.now()) - this.statsB.startTime;
+        this.elements.statTimeB.textContent = Math.max(0, elapsed) + "ms";
       }
     }
   }
@@ -1391,8 +1454,8 @@ async def search(arr, target):
         this.log("Tip: For Python, use 'async def sort(arr):' or 'async def search(arr, target):'");
       }
     } finally {
-      this.stats.endTime = Date.now();
-      this.statsB.endTime = Date.now();
+      if (!this.stats.endTime && this.stats.startTime) this.stats.endTime = Date.now();
+      if (!this.statsB.endTime && this.statsB.startTime) this.statsB.endTime = Date.now();
       this.updateStats();
       this.isRunning = false;
       this.isPaused = false;
@@ -1444,25 +1507,27 @@ async def search(arr, target):
     let winnerA = false, winnerB = false;
     const pA = (async () => {
       await runAlgo(codeA, apiA, [...arraySeedA], 'a');
-      if (this._runGeneration === runGen && !this.shouldStop && !winnerA && !winnerB) {
-        winnerA = true;
-        const tA = this.stats.endTime ? this.stats.endTime - this.stats.startTime : 0;
-        this.log(`🏆 [A] finished first in ${tA}ms  (comparisons: ${this.stats.comparisons}, swaps: ${this.stats.swaps})`);
-      }
       if (this._runGeneration === runGen && !this.shouldStop) {
-        this.stats.endTime = Date.now();
+        this.stats.endTime = this.stats.endTime || Date.now();
+        const tA = this.stats.endTime - this.stats.startTime;
+        if (!winnerA && !winnerB) {
+          winnerA = true;
+          this.log(`🏆 [A] finished first in ${tA}ms  (comparisons: ${this.stats.comparisons}, swaps: ${this.stats.swaps})`);
+        }
+        this.updateStats();
         for (let i = 0; i < this.array.length; i++) this.renderer.markSorted(i);
       }
     })();
     const pB = (async () => {
       await runAlgo(codeB, apiB, [...arraySeedB], 'b');
-      if (this._runGeneration === runGen && !this.shouldStop && !winnerA && !winnerB) {
-        winnerB = true;
-        const tB = this.statsB.endTime ? this.statsB.endTime - this.statsB.startTime : 0;
-        this.log(`🏆 [B] finished first in ${tB}ms  (comparisons: ${this.statsB.comparisons}, swaps: ${this.statsB.swaps})`);
-      }
       if (this._runGeneration === runGen && !this.shouldStop) {
-        this.statsB.endTime = Date.now();
+        this.statsB.endTime = this.statsB.endTime || Date.now();
+        const tB = this.statsB.endTime - this.statsB.startTime;
+        if (!winnerA && !winnerB) {
+          winnerB = true;
+          this.log(`🏆 [B] finished first in ${tB}ms  (comparisons: ${this.statsB.comparisons}, swaps: ${this.statsB.swaps})`);
+        }
+        this.updateStats();
         for (let i = 0; i < this.arrayB.length; i++) this.rendererB.markSorted(i);
       }
     })();
@@ -1472,8 +1537,8 @@ async def search(arr, target):
     if (this._runGeneration === runGen && !this.shouldStop) {
       this.sounds.play('complete');
       this.updateOperationInfo("Race finished!");
-      const tA = this.stats.endTime - this.stats.startTime;
-      const tB = this.statsB.endTime - this.statsB.startTime;
+      const tA = (this.stats.endTime || Date.now()) - this.stats.startTime;
+      const tB = (this.statsB.endTime || Date.now()) - this.statsB.startTime;
       this.log(`--- Race Result: [A] ${tA}ms  vs  [B] ${tB}ms ---`);
     }
   }

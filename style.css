@@ -359,7 +359,7 @@ select.btn-minimal:hover {
   flex-direction: column;
 }
 
-#visualizer {
+.visualizer {
   flex: 1;
   display: flex;
   align-items: flex-end;
@@ -700,13 +700,37 @@ input[type="checkbox"] {
 
 .editor-controls {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
   padding: var(--pad);
   background: var(--card);
   border-radius: var(--radius) var(--radius) 0 0;
   border-bottom: 1px solid var(--glass);
+}
+
+.toolbar-card {
+  background: color-mix(in srgb, var(--card) 90%, #000 10%);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
 }
 
 .toggle-label {
@@ -818,6 +842,13 @@ input[type="checkbox"] {
 .viz-side .visualizer {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+  border: 1px solid var(--accent);
+  border-top: none;
+}
+
+.viz-side-b .visualizer {
+  border: 1px solid #a78bfa;
+  border-top: none;
 }
 
 .viz-side-b .visualizer .bar {
