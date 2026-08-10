@@ -176,6 +176,7 @@ class AlgorithmVisualizer {
     this.elements.categorySelect.onchange = () => {
       this.currentCategory = this.elements.categorySelect.value;
       this.refreshAlgorithmOptions();
+      this.refreshAlgorithmSelectB();
       this.setExampleCode();
     };
 
@@ -275,12 +276,7 @@ class AlgorithmVisualizer {
             el.style.display = this.raceMode ? "" : "none";
           });
         }
-        if (this.raceMode && this.currentCategory !== "sort") {
-          this.currentCategory = "sort";
-          if (this.elements.categorySelect) this.elements.categorySelect.value = "sort";
-          this.refreshAlgorithmOptions();
-          this.setExampleCode();
-        }
+        this.refreshAlgorithmSelectB();
         this.generateArray();
         this.log("Race mode: " + (this.raceMode ? "ON" : "OFF"));
       };
@@ -416,6 +412,7 @@ class AlgorithmVisualizer {
       ],
     };
     const list = opts[this.currentCategory] || opts.sort;
+    const prev = this.currentAlgorithm;
     select.innerHTML = "";
     list.forEach(([v, l]) => {
       const o = document.createElement("option");
@@ -423,13 +420,54 @@ class AlgorithmVisualizer {
       o.textContent = l;
       select.appendChild(o);
     });
-    this.currentAlgorithm = list[0][0];
+    const values = list.map(([v]) => v);
+    const keep = prev && values.includes(prev);
+    this.currentAlgorithm = keep ? prev : list[0][0];
+    select.value = this.currentAlgorithm;
     if (this.elements.searchOnlyGroups) {
       const show = this.currentCategory === "search";
       this.elements.searchOnlyGroups.forEach(el => {
         el.style.display = show ? "" : "none";
       });
     }
+  }
+
+  refreshAlgorithmSelectB() {
+    if (!this.elements.algorithmSelectB) return;
+    const opts = {
+      sort: [
+        ["bubble", "Bubble Sort"],
+        ["selection", "Selection Sort"],
+        ["insertion", "Insertion Sort"],
+        ["merge", "Merge Sort"],
+        ["quick", "Quick Sort"],
+        ["heap", "Heap Sort"],
+        ["shell", "Shell Sort"],
+        ["cocktail", "Cocktail Shaker"],
+        ["counting", "Counting Sort"],
+        ["radix", "Radix Sort (LSD)"],
+      ],
+      search: [
+        ["linear", "Linear Search"],
+        ["binary", "Binary Search"],
+        ["interpolation", "Interpolation Search"],
+        ["exponential", "Exponential Search"],
+        ["ternary", "Ternary Search"],
+      ],
+    };
+    const list = opts[this.currentCategory] || opts.sort;
+    const prev = this.currentAlgorithmB;
+    this.elements.algorithmSelectB.innerHTML = "";
+    list.forEach(([v, l]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = l;
+      this.elements.algorithmSelectB.appendChild(o);
+    });
+    const values = list.map(([v]) => v);
+    const keep = prev && values.includes(prev);
+    this.currentAlgorithmB = keep ? prev : list[0][0];
+    this.elements.algorithmSelectB.value = this.currentAlgorithmB;
   }
   
   setExampleCode() {
@@ -1341,20 +1379,20 @@ async def search(arr, target):
     this.currentAlgorithm = this.elements.algorithmSelect.value;
     this.currentCategory = this.elements.categorySelect.value;
 
-    if (this.raceMode && this.currentCategory !== "sort") {
-      this.log("Race mode is only supported for sorting — using Category=Sort");
-      this.currentCategory = "sort";
-    }
-
     const validationError = this.validateCode(code, this.currentLanguage);
     if (validationError) {
       this.log(`Error: ${validationError}`);
       return;
     }
 
-    const sortedRequiredByAlgo =
+    const sortedAlgorithms = ["binary", "interpolation", "exponential", "ternary"];
+    const sortedRequiredByAlgoA =
       this.currentCategory === "search" &&
-      ["binary", "interpolation", "exponential", "ternary"].includes(this.currentAlgorithm);
+      sortedAlgorithms.includes(this.currentAlgorithm);
+    const sortedRequiredByAlgoB =
+      this.raceMode && this.currentCategory === "search" &&
+      sortedAlgorithms.includes(this.currentAlgorithmB);
+    const sortedRequiredByAlgo = sortedRequiredByAlgoA || sortedRequiredByAlgoB;
     const userWantsPreSort =
       this.currentCategory === "search" &&
       this.elements.searchSortToggle &&
@@ -1421,6 +1459,7 @@ async def search(arr, target):
           target: this.searchTarget,
           searchSortedRequires: needsSortedArrayForSearch,
           sortedRequiredByAlgo: sortedRequiredByAlgo,
+          sortedRequiredByAlgoA: sortedRequiredByAlgoA,
         });
       } else {
         const api = this.createVisualizationAPI('a');
@@ -1487,6 +1526,7 @@ async def search(arr, target):
 
   async runRace(codeA, sharedOpts) {
     const language = this.currentLanguage;
+    const category = this.currentCategory;
     const runGen = this._runGeneration;
     const arraySeedA = [...this.array];
     const arraySeedB = [...this.array];
@@ -1494,23 +1534,27 @@ async def search(arr, target):
     const apiA = this.createVisualizationAPI('a');
     const apiB = this.createVisualizationAPI('b');
 
-    const runAlgo = (code, api, seedArr, which) => {
+    const sortedRequiredByAlgoB =
+      category === "search" &&
+      ["binary", "interpolation", "exponential", "ternary"].includes(this.currentAlgorithmB);
+
+    const runAlgo = (code, api, seedArr, which, sortedRequired) => {
       if (language === 'javascript') {
         return this.runJavaScript(code, api, {
-          category: 'sort',
+          category: category,
           target: this.searchTarget,
           searchSortedRequires: sharedOpts.searchSortedRequires,
-          sortedRequiredByAlgo: sharedOpts.sortedRequiredByAlgo,
+          sortedRequiredByAlgo: sortedRequired,
           side: which,
           initialSeed: seedArr,
         });
       } else {
         const runner = which === 'a' ? this.pythonRunner : this.pythonRunnerB;
         return runner.run(code, seedArr, api, () => this.shouldStop, {
-          category: 'sort',
+          category: category,
           target: this.searchTarget,
-          searchSortedRequires: false,
-          sortedRequiredByAlgo: false,
+          searchSortedRequires: sharedOpts.searchSortedRequires,
+          sortedRequiredByAlgo: sortedRequired,
           side: which,
         }).then(result => {
           if (this._runGeneration === runGen && !this.shouldStop && result && Array.isArray(result)) {
@@ -1521,11 +1565,11 @@ async def search(arr, target):
       }
     };
 
-    const codeB = this.getBuiltinSortCode(this.currentAlgorithmB, language);
+    const codeB = this.getBuiltinCode(this.currentAlgorithmB, category, language);
 
     let winnerA = false, winnerB = false;
     const pA = (async () => {
-      await runAlgo(codeA, apiA, [...arraySeedA], 'a');
+      await runAlgo(codeA, apiA, [...arraySeedA], 'a', sharedOpts.sortedRequiredByAlgoA ?? sharedOpts.sortedRequiredByAlgo);
       if (this._runGeneration === runGen && !this.shouldStop) {
         this.stats.endTime = this.stats.endTime || Date.now();
         const tA = this.stats.endTime - this.stats.startTime;
@@ -1534,11 +1578,13 @@ async def search(arr, target):
           this.log(`🏆 [A] finished first in ${tA}ms  (comparisons: ${this.stats.comparisons}, swaps: ${this.stats.swaps})`);
         }
         this.updateStats();
-        for (let i = 0; i < this.array.length; i++) this.renderer.markSorted(i);
+        if (category === "sort") {
+          for (let i = 0; i < this.array.length; i++) this.renderer.markSorted(i);
+        }
       }
     })();
     const pB = (async () => {
-      await runAlgo(codeB, apiB, [...arraySeedB], 'b');
+      await runAlgo(codeB, apiB, [...arraySeedB], 'b', sortedRequiredByAlgoB);
       if (this._runGeneration === runGen && !this.shouldStop) {
         this.statsB.endTime = this.statsB.endTime || Date.now();
         const tB = this.statsB.endTime - this.statsB.startTime;
@@ -1547,7 +1593,9 @@ async def search(arr, target):
           this.log(`🏆 [B] finished first in ${tB}ms  (comparisons: ${this.statsB.comparisons}, swaps: ${this.statsB.swaps})`);
         }
         this.updateStats();
-        for (let i = 0; i < this.arrayB.length; i++) this.rendererB.markSorted(i);
+        if (category === "sort") {
+          for (let i = 0; i < this.arrayB.length; i++) this.rendererB.markSorted(i);
+        }
       }
     })();
 
@@ -1562,34 +1610,55 @@ async def search(arr, target):
     }
   }
 
-  getBuiltinSortCode(algo, language) {
+  getBuiltinCode(algo, category, language) {
     const t = {
       javascript: {
-        bubble: `for (let i = 0; i < arr.length - 1; i++) { for (let j = 0; j < arr.length - i - 1; j++) { await compare(j, j + 1); if (arr[j] > arr[j + 1]) await swap(arr, j, j + 1); } }`,
-        selection: `for (let i = 0; i < arr.length - 1; i++) { let mi = i; for (let j = i + 1; j < arr.length; j++) { await compare(mi, j); if (arr[j] < arr[mi]) mi = j; } if (mi !== i) await swap(arr, i, mi); }`,
-        insertion: `for (let i = 1; i < arr.length; i++) { let k = arr[i], j = i - 1; while (j >= 0 && arr[j] > k) { await compare(j, i); await swap(arr, j, j + 1); j--; } arr[j + 1] = k; await renderArray(arr); }`,
-        merge: `async function mergeSortHelper(arr, left, right) { if (left < right) { const mid = Math.floor((left + right) / 2); await mergeSortHelper(arr, left, mid); await mergeSortHelper(arr, mid + 1, right); const L = arr.slice(left, mid + 1), R = arr.slice(mid + 1, right + 1); let i = 0, j = 0, k = left; while (i < L.length && j < R.length) { await compare(left + i, mid + 1 + j); if (L[i] <= R[j]) arr[k++] = L[i++]; else arr[k++] = R[j++]; await renderArray(arr); } while (i < L.length) { arr[k++] = L[i++]; await renderArray(arr); } while (j < R.length) { arr[k++] = R[j++]; await renderArray(arr); } } } await mergeSortHelper(arr, 0, arr.length - 1);`,
-        quick: `async function qs(arr, low, high) { if (low < high) { const pivot = arr[high]; let i = low - 1; for (let j = low; j < high; j++) { await compare(j, high); if (arr[j] <= pivot) { i++; if (i !== j) await swap(arr, i, j); } } if (i + 1 !== high) await swap(arr, i + 1, high); await qs(arr, low, i); await qs(arr, i + 2, high); } } await qs(arr, 0, arr.length - 1);`,
-        heap: `const n = arr.length; async function heapify(arr, hs, i) { let l = i; const lc = 2 * i + 1, rc = 2 * i + 2; if (lc < hs) { await compare(lc, l); if (arr[lc] > arr[l]) l = lc; } if (rc < hs) { await compare(rc, l); if (arr[rc] > arr[l]) l = rc; } if (l !== i) { await swap(arr, i, l); await heapify(arr, hs, l); } } for (let i = Math.floor(n / 2) - 1; i >= 0; i--) await heapify(arr, n, i); for (let i = n - 1; i > 0; i--) { await swap(arr, 0, i); await heapify(arr, i, 0); }`,
-        shell: `const n = arr.length; for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) { for (let i = gap; i < n; i++) { const tmp = arr[i]; let j = i; while (j >= gap) { await compare(j - gap, i); if (arr[j - gap] > tmp) { await swap(arr, j - gap, j); j -= gap; } else break; } arr[j] = tmp; await renderArray(arr); } }`,
-        cocktail: `let start = 0, end = arr.length - 1, swapped = true; while (swapped) { swapped = false; for (let i = start; i < end; i++) { await compare(i, i + 1); if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; } } if (!swapped) break; end--; swapped = false; for (let i = end - 1; i >= start; i--) { await compare(i, i + 1); if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; } } start++; }`,
-        counting: `if (arr.length <= 1) return; const min = Math.min(...arr), max = Math.max(...arr); const range = max - min + 1; const count = new Array(range).fill(0); for (let i = 0; i < arr.length; i++) { await compare(i, i); count[arr[i] - min]++; } const out = new Array(arr.length); let idx = 0; for (let b = 0; b < range; b++) { while (count[b] > 0) { out[idx] = min + b; count[b]--; idx++; if (idx < arr.length) await compare(idx, idx); } } for (let i = 0; i < arr.length; i++) arr[i] = out[i]; await renderArray(arr);`,
-        radix: `const c = async (arr, n, exp) => { const out = new Array(n).fill(0); const cnt = new Array(10).fill(0); for (let i = 0; i < n; i++) cnt[Math.floor(arr[i] / exp) % 10]++; for (let i = 1; i < 10; i++) cnt[i] += cnt[i - 1]; for (let i = n - 1; i >= 0; i--) { const d = Math.floor(arr[i] / exp) % 10; out[cnt[d] - 1] = arr[i]; cnt[d]--; await compare(i, i); } for (let i = 0; i < n; i++) arr[i] = out[i]; await renderArray(arr); }; const n = arr.length, m = Math.max(...arr); for (let exp = 1; Math.floor(m / exp) > 0; exp *= 10) await c(arr, n, exp);`
+        sort: {
+          bubble: `for (let i = 0; i < arr.length - 1; i++) { for (let j = 0; j < arr.length - i - 1; j++) { await compare(j, j + 1); if (arr[j] > arr[j + 1]) await swap(arr, j, j + 1); } }`,
+          selection: `for (let i = 0; i < arr.length - 1; i++) { let mi = i; for (let j = i + 1; j < arr.length; j++) { await compare(mi, j); if (arr[j] < arr[mi]) mi = j; } if (mi !== i) await swap(arr, i, mi); }`,
+          insertion: `for (let i = 1; i < arr.length; i++) { let k = arr[i], j = i - 1; while (j >= 0 && arr[j] > k) { await compare(j, i); await swap(arr, j, j + 1); j--; } arr[j + 1] = k; await renderArray(arr); }`,
+          merge: `async function mergeSortHelper(arr, left, right) { if (left < right) { const mid = Math.floor((left + right) / 2); await mergeSortHelper(arr, left, mid); await mergeSortHelper(arr, mid + 1, right); const L = arr.slice(left, mid + 1), R = arr.slice(mid + 1, right + 1); let i = 0, j = 0, k = left; while (i < L.length && j < R.length) { await compare(left + i, mid + 1 + j); if (L[i] <= R[j]) arr[k++] = L[i++]; else arr[k++] = R[j++]; await renderArray(arr); } while (i < L.length) { arr[k++] = L[i++]; await renderArray(arr); } while (j < R.length) { arr[k++] = R[j++]; await renderArray(arr); } } } await mergeSortHelper(arr, 0, arr.length - 1);`,
+          quick: `async function qs(arr, low, high) { if (low < high) { const pivot = arr[high]; let i = low - 1; for (let j = low; j < high; j++) { await compare(j, high); if (arr[j] <= pivot) { i++; if (i !== j) await swap(arr, i, j); } } if (i + 1 !== high) await swap(arr, i + 1, high); await qs(arr, low, i); await qs(arr, i + 2, high); } } await qs(arr, 0, arr.length - 1);`,
+          heap: `const n = arr.length; async function heapify(arr, hs, i) { let l = i; const lc = 2 * i + 1, rc = 2 * i + 2; if (lc < hs) { await compare(lc, l); if (arr[lc] > arr[l]) l = lc; } if (rc < hs) { await compare(rc, l); if (arr[rc] > arr[l]) l = rc; } if (l !== i) { await swap(arr, i, l); await heapify(arr, hs, l); } } for (let i = Math.floor(n / 2) - 1; i >= 0; i--) await heapify(arr, n, i); for (let i = n - 1; i > 0; i--) { await swap(arr, 0, i); await heapify(arr, i, 0); }`,
+          shell: `const n = arr.length; for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) { for (let i = gap; i < n; i++) { const tmp = arr[i]; let j = i; while (j >= gap) { await compare(j - gap, i); if (arr[j - gap] > tmp) { await swap(arr, j - gap, j); j -= gap; } else break; } arr[j] = tmp; await renderArray(arr); } }`,
+          cocktail: `let start = 0, end = arr.length - 1, swapped = true; while (swapped) { swapped = false; for (let i = start; i < end; i++) { await compare(i, i + 1); if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; } } if (!swapped) break; end--; swapped = false; for (let i = end - 1; i >= start; i--) { await compare(i, i + 1); if (arr[i] > arr[i + 1]) { await swap(arr, i, i + 1); swapped = true; } } start++; }`,
+          counting: `if (arr.length <= 1) return; const min = Math.min(...arr), max = Math.max(...arr); const range = max - min + 1; const count = new Array(range).fill(0); for (let i = 0; i < arr.length; i++) { await compare(i, i); count[arr[i] - min]++; } const out = new Array(arr.length); let idx = 0; for (let b = 0; b < range; b++) { while (count[b] > 0) { out[idx] = min + b; count[b]--; idx++; if (idx < arr.length) await compare(idx, idx); } } for (let i = 0; i < arr.length; i++) arr[i] = out[i]; await renderArray(arr);`,
+          radix: `const c = async (arr, n, exp) => { const out = new Array(n).fill(0); const cnt = new Array(10).fill(0); for (let i = 0; i < n; i++) cnt[Math.floor(arr[i] / exp) % 10]++; for (let i = 1; i < 10; i++) cnt[i] += cnt[i - 1]; for (let i = n - 1; i >= 0; i--) { const d = Math.floor(arr[i] / exp) % 10; out[cnt[d] - 1] = arr[i]; cnt[d]--; await compare(i, i); } for (let i = 0; i < n; i++) arr[i] = out[i]; await renderArray(arr); }; const n = arr.length, m = Math.max(...arr); for (let exp = 1; Math.floor(m / exp) > 0; exp *= 10) await c(arr, n, exp);`,
+        },
+        search: {
+          linear: `for (let i = 0; i < arr.length; i++) { await compare(i, i); if (arr[i] === target) { await markFound(i); return i; } } return -1;`,
+          binary: `let left = 0, right = arr.length - 1; while (left <= right) { const mid = Math.floor((left + right) / 2); await compare(mid, mid); if (arr[mid] === target) { await markFound(mid); return mid; } if (arr[mid] < target) left = mid + 1; else right = mid - 1; } return -1;`,
+          interpolation: `let left = 0, right = arr.length - 1; while (left <= right && target >= arr[left] && target <= arr[right]) { if (left === right) { await compare(left, left); if (arr[left] === target) { await markFound(left); return left; } return -1; } const pos = left + Math.floor(((target - arr[left]) * (right - left)) / (arr[right] - arr[left])); await compare(pos, pos); if (arr[pos] === target) { await markFound(pos); return pos; } if (arr[pos] < target) left = pos + 1; else right = pos - 1; } return -1;`,
+          exponential: `if (arr[0] === target) { await compare(0, 0); await markFound(0); return 0; } let i = 1; while (i < arr.length && arr[i] <= target) { await compare(i, i); i = i * 2; } let left = Math.floor(i / 2), right = Math.min(i, arr.length - 1); while (left <= right) { const mid = Math.floor((left + right) / 2); await compare(mid, mid); if (arr[mid] === target) { await markFound(mid); return mid; } if (arr[mid] < target) left = mid + 1; else right = mid - 1; } return -1;`,
+          ternary: `let left = 0, right = arr.length - 1; while (left <= right) { if (right - left < 3) { for (let k = left; k <= right; k++) { await compare(k, k); if (arr[k] === target) { await markFound(k); return k; } } break; } const m1 = left + Math.floor((right - left) / 3); const m2 = right - Math.floor((right - left) / 3); await compare(m1, m1); await compare(m2, m2); if (arr[m1] === target) { await markFound(m1); return m1; } if (arr[m2] === target) { await markFound(m2); return m2; } if (target < arr[m1]) right = m1 - 1; else if (target > arr[m2]) left = m2 + 1; else { left = m1 + 1; right = m2 - 1; } } return -1;`,
+        }
       },
       python: {
-        bubble: `async def sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(n - i - 1):\n            await compare(j, j + 1)\n            if arr[j] > arr[j + 1]:\n                await swap(arr, j, j + 1)`,
-        selection: `async def sort(arr):\n    n = len(arr)\n    for i in range(n - 1):\n        mi = i\n        for j in range(i + 1, n):\n            await compare(mi, j)\n            if arr[j] < arr[mi]: mi = j\n        if mi != i: await swap(arr, i, mi)`,
-        insertion: `async def sort(arr):\n    for i in range(1, len(arr)):\n        k = arr[i]\n        j = i - 1\n        while j >= 0 and arr[j] > k:\n            await compare(j, i)\n            await swap(arr, j, j + 1)\n            j -= 1\n        arr[j + 1] = k\n        await render_array(arr)`,
-        merge: `async def merge_sort(arr, l, r):\n    if l < r:\n        mid = (l + r) // 2\n        await merge_sort(arr, l, mid)\n        await merge_sort(arr, mid + 1, r)\n        L = arr[l:mid + 1]; R = arr[mid + 1:r + 1]\n        i = j = 0; k = l\n        while i < len(L) and j < len(R):\n            await compare(l + i, mid + 1 + j)\n            if L[i] <= R[j]: arr[k] = L[i]; i += 1\n            else: arr[k] = R[j]; j += 1\n            k += 1\n            await render_array(arr)\n        while i < len(L):\n            arr[k] = L[i]; i += 1; k += 1\n            await render_array(arr)\n        while j < len(R):\n            arr[k] = R[j]; j += 1; k += 1\n            await render_array(arr)\nasync def sort(arr):\n    await merge_sort(arr, 0, len(arr) - 1)`,
-        quick: `async def qs(arr, low, high):\n    if low < high:\n        pivot = arr[high]\n        i = low - 1\n        for j in range(low, high):\n            await compare(j, high)\n            if arr[j] <= pivot:\n                i += 1\n                if i != j: await swap(arr, i, j)\n        if i + 1 != high: await swap(arr, i + 1, high)\n        await qs(arr, low, i)\n        await qs(arr, i + 2, high)\nasync def sort(arr):\n    await qs(arr, 0, len(arr) - 1)`,
-        heap: `async def heapify(arr, n, i):\n    l = i\n    lc = 2 * i + 1; rc = 2 * i + 2\n    if lc < n:\n        await compare(lc, l)\n        if arr[lc] > arr[l]: l = lc\n    if rc < n:\n        await compare(rc, l)\n        if arr[rc] > arr[l]: l = rc\n    if l != i:\n        await swap(arr, i, l)\n        await heapify(arr, n, l)\nasync def sort(arr):\n    n = len(arr)\n    for i in range(n // 2 - 1, -1, -1): await heapify(arr, n, i)\n    for i in range(n - 1, 0, -1):\n        await swap(arr, 0, i)\n        await heapify(arr, i, 0)`,
-        shell: `async def sort(arr):\n    n = len(arr)\n    gap = n // 2\n    while gap > 0:\n        for i in range(gap, n):\n            tmp = arr[i]\n            j = i\n            while j >= gap:\n                await compare(j - gap, i)\n                if arr[j - gap] > tmp:\n                    await swap(arr, j - gap, j)\n                    j -= gap\n                else: break\n            arr[j] = tmp\n            await render_array(arr)\n        gap //= 2`,
-        cocktail: `async def sort(arr):\n    n = len(arr)\n    start = 0; end = n - 1; swapped = True\n    while swapped:\n        swapped = False\n        for i in range(start, end):\n            await compare(i, i + 1)\n            if arr[i] > arr[i + 1]:\n                await swap(arr, i, i + 1); swapped = True\n        if not swapped: break\n        end -= 1; swapped = False\n        for i in range(end - 1, start - 1, -1):\n            await compare(i, i + 1)\n            if arr[i] > arr[i + 1]:\n                await swap(arr, i, i + 1); swapped = True\n        start += 1`,
-        counting: `async def sort(arr):\n    if len(arr) <= 1: return\n    mn = min(arr); mx = max(arr)\n    rng = mx - mn + 1\n    count = [0] * rng\n    for i in range(len(arr)):\n        await compare(i, i)\n        count[arr[i] - mn] += 1\n    out = [0] * len(arr); idx = 0\n    for b in range(rng):\n        while count[b] > 0:\n            out[idx] = mn + b; count[b] -= 1; idx += 1\n            if idx < len(arr): await compare(idx, idx)\n    for i in range(len(arr)): arr[i] = out[i]\n    await render_array(arr)`,
-        radix: `async def _c(arr, n, exp):\n    out = [0] * n; cnt = [0] * 10\n    for i in range(n): cnt[(arr[i] // exp) % 10] += 1\n    for i in range(1, 10): cnt[i] += cnt[i - 1]\n    for i in range(n - 1, -1, -1):\n        d = (arr[i] // exp) % 10\n        out[cnt[d] - 1] = arr[i]\n        cnt[d] -= 1\n        await compare(i, i)\n    for i in range(n): arr[i] = out[i]\n    await render_array(arr)\nasync def sort(arr):\n    n = len(arr); m = max(arr); exp = 1\n    while m // exp > 0:\n        await _c(arr, n, exp)\n        exp *= 10`
+        sort: {
+          bubble: `async def sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(n - i - 1):\n            await compare(j, j + 1)\n            if arr[j] > arr[j + 1]:\n                await swap(arr, j, j + 1)`,
+          selection: `async def sort(arr):\n    n = len(arr)\n    for i in range(n - 1):\n        mi = i\n        for j in range(i + 1, n):\n            await compare(mi, j)\n            if arr[j] < arr[mi]: mi = j\n        if mi != i: await swap(arr, i, mi)`,
+          insertion: `async def sort(arr):\n    for i in range(1, len(arr)):\n        k = arr[i]\n        j = i - 1\n        while j >= 0 and arr[j] > k:\n            await compare(j, i)\n            await swap(arr, j, j + 1)\n            j -= 1\n        arr[j + 1] = k\n        await render_array(arr)`,
+          merge: `async def merge_sort(arr, l, r):\n    if l < r:\n        mid = (l + r) // 2\n        await merge_sort(arr, l, mid)\n        await merge_sort(arr, mid + 1, r)\n        L = arr[l:mid + 1]; R = arr[mid + 1:r + 1]\n        i = j = 0; k = l\n        while i < len(L) and j < len(R):\n            await compare(l + i, mid + 1 + j)\n            if L[i] <= R[j]: arr[k] = L[i]; i += 1\n            else: arr[k] = R[j]; j += 1\n            k += 1\n            await render_array(arr)\n        while i < len(L):\n            arr[k] = L[i]; i += 1; k += 1\n            await render_array(arr)\n        while j < len(R):\n            arr[k] = R[j]; j += 1; k += 1\n            await render_array(arr)\nasync def sort(arr):\n    await merge_sort(arr, 0, len(arr) - 1)`,
+          quick: `async def qs(arr, low, high):\n    if low < high:\n        pivot = arr[high]\n        i = low - 1\n        for j in range(low, high):\n            await compare(j, high)\n            if arr[j] <= pivot:\n                i += 1\n                if i != j: await swap(arr, i, j)\n        if i + 1 != high: await swap(arr, i + 1, high)\n        await qs(arr, low, i)\n        await qs(arr, i + 2, high)\nasync def sort(arr):\n    await qs(arr, 0, len(arr) - 1)`,
+          heap: `async def heapify(arr, n, i):\n    l = i\n    lc = 2 * i + 1; rc = 2 * i + 2\n    if lc < n:\n        await compare(lc, l)\n        if arr[lc] > arr[l]: l = lc\n    if rc < n:\n        await compare(rc, l)\n        if arr[rc] > arr[l]: l = rc\n    if l != i:\n        await swap(arr, i, l)\n        await heapify(arr, n, l)\nasync def sort(arr):\n    n = len(arr)\n    for i in range(n // 2 - 1, -1, -1): await heapify(arr, n, i)\n    for i in range(n - 1, 0, -1):\n        await swap(arr, 0, i)\n        await heapify(arr, i, 0)`,
+          shell: `async def sort(arr):\n    n = len(arr)\n    gap = n // 2\n    while gap > 0:\n        for i in range(gap, n):\n            tmp = arr[i]\n            j = i\n            while j >= gap:\n                await compare(j - gap, i)\n                if arr[j - gap] > tmp:\n                    await swap(arr, j - gap, j)\n                    j -= gap\n                else: break\n            arr[j] = tmp\n            await render_array(arr)\n        gap //= 2`,
+          cocktail: `async def sort(arr):\n    n = len(arr)\n    start = 0; end = n - 1; swapped = True\n    while swapped:\n        swapped = False\n        for i in range(start, end):\n            await compare(i, i + 1)\n            if arr[i] > arr[i + 1]:\n                await swap(arr, i, i + 1); swapped = True\n        if not swapped: break\n        end -= 1; swapped = False\n        for i in range(end - 1, start - 1, -1):\n            await compare(i, i + 1)\n            if arr[i] > arr[i + 1]:\n                await swap(arr, i, i + 1); swapped = True\n        start += 1`,
+          counting: `async def sort(arr):\n    if len(arr) <= 1: return\n    mn = min(arr); mx = max(arr)\n    rng = mx - mn + 1\n    count = [0] * rng\n    for i in range(len(arr)):\n        await compare(i, i)\n        count[arr[i] - mn] += 1\n    out = [0] * len(arr); idx = 0\n    for b in range(rng):\n        while count[b] > 0:\n            out[idx] = mn + b; count[b] -= 1; idx += 1\n            if idx < len(arr): await compare(idx, idx)\n    for i in range(len(arr)): arr[i] = out[i]\n    await render_array(arr)`,
+          radix: `async def _c(arr, n, exp):\n    out = [0] * n; cnt = [0] * 10\n    for i in range(n): cnt[(arr[i] // exp) % 10] += 1\n    for i in range(1, 10): cnt[i] += cnt[i - 1]\n    for i in range(n - 1, -1, -1):\n        d = (arr[i] // exp) % 10\n        out[cnt[d] - 1] = arr[i]\n        cnt[d] -= 1\n        await compare(i, i)\n    for i in range(n): arr[i] = out[i]\n    await render_array(arr)\nasync def sort(arr):\n    n = len(arr); m = max(arr); exp = 1\n    while m // exp > 0:\n        await _c(arr, n, exp)\n        exp *= 10`,
+        },
+        search: {
+          linear: `async def search(arr, target):\n    for i in range(len(arr)):\n        await compare(i, i)\n        if arr[i] == target:\n            await mark_found(i)\n            return i\n    return -1`,
+          binary: `async def search(arr, target):\n    left = 0\n    right = len(arr) - 1\n    while left <= right:\n        mid = (left + right) // 2\n        await compare(mid, mid)\n        if arr[mid] == target:\n            await mark_found(mid)\n            return mid\n        if arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1`,
+          interpolation: `async def search(arr, target):\n    left = 0\n    right = len(arr) - 1\n    while left <= right and arr[left] <= target <= arr[right]:\n        if left == right:\n            await compare(left, left)\n            if arr[left] == target:\n                await mark_found(left)\n                return left\n            return -1\n        pos = left + (((target - arr[left]) * (right - left)) //\n                      (arr[right] - arr[left]))\n        await compare(pos, pos)\n        if arr[pos] == target:\n            await mark_found(pos)\n            return pos\n        if arr[pos] < target:\n            left = pos + 1\n        else:\n            right = pos - 1\n    return -1`,
+          exponential: `async def search(arr, target):\n    n = len(arr)\n    if n == 0:\n        return -1\n    if arr[0] == target:\n        await compare(0, 0)\n        await mark_found(0)\n        return 0\n    i = 1\n    while i < n and arr[i] <= target:\n        await compare(i, i)\n        i *= 2\n    left = i // 2\n    right = min(i, n - 1)\n    while left <= right:\n        mid = (left + right) // 2\n        await compare(mid, mid)\n        if arr[mid] == target:\n            await mark_found(mid)\n            return mid\n        if arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1`,
+          ternary: `async def search(arr, target):\n    left = 0\n    right = len(arr) - 1\n    while left <= right:\n        if right - left < 3:\n            for k in range(left, right + 1):\n                await compare(k, k)\n                if arr[k] == target:\n                    await mark_found(k)\n                    return k\n            break\n        m1 = left + (right - left) // 3\n        m2 = right - (right - left) // 3\n        await compare(m1, m1)\n        await compare(m2, m2)\n        if arr[m1] == target:\n            await mark_found(m1)\n            return m1\n        if arr[m2] == target:\n            await mark_found(m2)\n            return m2\n        if target < arr[m1]:\n            right = m1 - 1\n        elif target > arr[m2]:\n            left = m2 + 1\n        else:\n            left = m1 + 1\n            right = m2 - 1\n    return -1`,
+        },
       }
     };
-    return (t[language] && t[language][algo]) || t[language].bubble;
+    const byLang = t[language];
+    if (!byLang) return '';
+    const byCat = byLang[category] || byLang.sort;
+    return byCat[algo] || byCat.bubble || byCat.linear || '';
   }
   
   createVisualizationAPI(side = 'a') {
@@ -2011,6 +2080,9 @@ async def search(arr, target):
     if (!this.complexityDataA) this.complexityDataA = [];
     if (!this.complexityDataB) this.complexityDataB = [];
     const canvas = this.complexityCanvas;
+    const isRace = !!this.raceMode;
+    const canvasW = isRace ? 320 : 280;
+    if (canvas.width !== canvasW) canvas.width = canvasW;
     const W = canvas.width, H = canvas.height;
     const pad = { top: 8, right: 8, bottom: 20, left: 40 };
     const plotW = W - pad.left - pad.right;
@@ -2019,16 +2091,21 @@ async def search(arr, target):
     ctx.clearRect(0, 0, W, H);
 
     const n = this.array.length || 20;
-    const complexity = this.getTheoreticalComplexity(this.currentAlgorithm);
-    const theoreticalMax = complexity.fn(n);
+    const complexityA = this.getTheoreticalComplexity(this.currentAlgorithm);
+    const complexityB = isRace ? this.getTheoreticalComplexity(this.currentAlgorithmB) : null;
+    const theoreticalMaxA = complexityA.fn(n);
+    const theoreticalMaxB = complexityB ? complexityB.fn(n) : 0;
     const actualMax = Math.max(
-      theoreticalMax,
+      theoreticalMaxA,
+      theoreticalMaxB,
       ...this.complexityDataA,
       ...(this.complexityDataB || []),
       1
     );
 
-    const totalSteps = Math.max(this.complexityDataA.length, 1);
+    const totalSteps = Math.max(this.complexityDataA.length, this.complexityDataB?.length || 0, 1);
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#60a5fa';
+    const colorB = '#a78bfa';
 
     // Draw grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.07)';
@@ -2038,25 +2115,41 @@ async def search(arr, target):
       ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
     }
 
-    // Theoretical curve
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    // Theoretical curve — A (dashed, A's color)
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = accent + '99';
     ctx.beginPath();
     for (let i = 0; i <= plotW; i++) {
       const progress = i / plotW;
       const curN = Math.max(1, Math.floor(progress * n));
-      const val = complexity.fn(curN);
+      const val = complexityA.fn(curN);
       const x = pad.left + i;
       const y = pad.top + plotH - (val / actualMax) * plotH;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.stroke();
+
+    // Theoretical curve — B (dashed, B's color, race mode)
+    if (isRace && complexityB) {
+      ctx.strokeStyle = colorB + '99';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      for (let i = 0; i <= plotW; i++) {
+        const progress = i / plotW;
+        const curN = Math.max(1, Math.floor(progress * n));
+        const val = complexityB.fn(curN);
+        const x = pad.left + i;
+        const y = pad.top + plotH - (val / actualMax) * plotH;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
     ctx.setLineDash([]);
 
     // Actual operations curve — Side A
     if (this.complexityDataA.length > 1) {
-      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#60a5fa';
+      ctx.strokeStyle = accent;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < this.complexityDataA.length; i++) {
@@ -2068,8 +2161,8 @@ async def search(arr, target):
     }
 
     // Actual operations curve — Side B (race mode)
-    if (this.raceMode && this.complexityDataB.length > 1) {
-      ctx.strokeStyle = '#a78bfa';
+    if (isRace && this.complexityDataB && this.complexityDataB.length > 1) {
+      ctx.strokeStyle = colorB;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < this.complexityDataB.length; i++) {
@@ -2100,11 +2193,25 @@ async def search(arr, target):
     const legend = document.getElementById('complexity-legend');
     if (legend) {
       const algoName = this.elements.algorithmSelect?.selectedOptions?.[0]?.textContent || this.currentAlgorithm;
-      let html = `<span class="legend-item"><span class="legend-dot" style="background: var(--accent)"></span>${algoName}</span>`;
-      html += `<span class="legend-item"><span class="legend-line-dashed"></span>${complexity.avg}</span>`;
-      if (this.raceMode) {
+      let html = `<span class="legend-item"><span class="legend-dot" style="background: ${accent}"></span>${algoName} <span style="opacity:.5">(${complexityA.avg})</span></span>`;
+      html += `<span class="legend-item"><span class="legend-line-dashed" style="border-top-color: ${accent}99"></span>Theory A</span>`;
+      if (isRace) {
         const algoBName = this.elements.algorithmSelectB?.selectedOptions?.[0]?.textContent || this.currentAlgorithmB;
-        html += `<span class="legend-item"><span class="legend-dot" style="background: #a78bfa"></span>${algoBName}</span>`;
+        const cxB = complexityB ? complexityB.avg : '?';
+        html += `<span class="legend-item"><span class="legend-dot" style="background: ${colorB}"></span>${algoBName} <span style="opacity:.5">(${cxB})</span></span>`;
+        html += `<span class="legend-item"><span class="legend-line-dashed" style="border-top-color: ${colorB}99"></span>Theory B</span>`;
+      }
+      // Final summary stats in race mode
+      if (isRace && this.stats && this.statsB) {
+        const opsA = this.stats.comparisons + this.stats.swaps;
+        const opsB = this.statsB.comparisons + this.statsB.swaps;
+        if (opsA > 0 || opsB > 0) {
+          const diff = opsB - opsA;
+          let label = '';
+          if (diff > 0) label = `▲+${diff}`;
+          else if (diff < 0) label = `▼${diff}`;
+          html += `<span class="legend-item" style="margin-top:4px;width:100%;justify-content:space-between;border-top:1px dashed rgba(255,255,255,0.08);padding-top:5px;"><span style="color:${accent}">A: ${opsA}</span><span style="opacity:.6">${label}</span><span style="color:${colorB}">B: ${opsB}</span></span>`;
+        }
       }
       legend.innerHTML = html;
     }
