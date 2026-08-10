@@ -15,7 +15,7 @@ class AlgorithmVisualizer {
     this.currentLanguage = 'javascript';
     this.currentCategory = 'sort';
     this.currentAlgorithm = 'bubble';
-    this.currentAlgorithmB = 'insertion';
+    this.currentAlgorithmB = 'bubble';
     this.searchTarget = null;
     this.stepResolve = null;
     this._generation = 0;
@@ -385,7 +385,9 @@ class AlgorithmVisualizer {
     if (this.elements.complexityBtn) {
       this.elements.complexityBtn.onclick = () => {
         if (!this.complexityOverlay) this.initComplexityOverlay();
+        const willShow = !this.complexityOverlay.classList.contains('visible');
         this.complexityOverlay.classList.toggle('visible');
+        if (willShow) this.renderComplexityChart();
       };
     }
   }
@@ -1392,7 +1394,7 @@ async def search(arr, target):
     this.statsB.swaps = 0;
     this.statsB.steps = 0;
     this.updateStats();
-    this.showComplexityOverlay();
+    this.resetComplexityData();
 
     this.elements.runBtn.style.display = "none";
     this.elements.pauseBtn.style.display = "inline-block";
@@ -1976,11 +1978,14 @@ async def search(arr, target):
     this.complexityOverlay = overlay;
   }
 
+  resetComplexityData() {
+    this.complexityDataA = [];
+    this.complexityDataB = [];
+  }
+
   showComplexityOverlay() {
     if (!this.complexityOverlay) this.initComplexityOverlay();
     this.complexityOverlay.classList.add('visible');
-    this.complexityDataA = [];
-    this.complexityDataB = [];
     this.renderComplexityChart();
   }
 
@@ -1989,17 +1994,22 @@ async def search(arr, target):
   }
 
   updateComplexityData() {
-    if (!this.complexityCanvas || !this.complexityOverlay?.classList.contains('visible')) return;
+    if (!this.complexityDataA) this.complexityDataA = [];
+    if (!this.complexityDataB) this.complexityDataB = [];
     this.complexityDataA.push(this.stats.comparisons + this.stats.swaps);
     if (this.raceMode) {
       this.complexityDataB.push(this.statsB.comparisons + this.statsB.swaps);
     }
-    this.renderComplexityChart();
+    if (this.complexityCanvas && this.complexityOverlay?.classList.contains('visible')) {
+      this.renderComplexityChart();
+    }
   }
 
   renderComplexityChart() {
     const ctx = this.complexityCtx;
     if (!ctx) return;
+    if (!this.complexityDataA) this.complexityDataA = [];
+    if (!this.complexityDataB) this.complexityDataB = [];
     const canvas = this.complexityCanvas;
     const W = canvas.width, H = canvas.height;
     const pad = { top: 8, right: 8, bottom: 20, left: 40 };
