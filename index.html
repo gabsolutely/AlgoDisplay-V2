@@ -254,13 +254,6 @@
                 <div class="editor-container">
                     <div class="editor-workspace">
                         <textarea id="code-editor" class="code-editor" placeholder="Write your sorting algorithm here..."></textarea>
-                        <div id="pseudocode-panel" class="pseudocode-panel">
-                            <div class="pseudocode-header">
-                                <span>📖 Canonical Pseudocode</span>
-                                <span id="pseudocode-algo-title" class="pseudocode-algo-title">Bubble Sort</span>
-                            </div>
-                            <div id="pseudocode-body" class="pseudocode-body"></div>
-                        </div>
                     </div>
                 </div>
                 <div id="help-panel" class="help-panel" style="display: none;">
@@ -337,6 +330,22 @@ for (let i = 0; i < arr.length - 1; i++) {
                 <div class="visualization-header">
                     <h2>Visualization</h2>
                     <div id="operation-info" class="operation-info"></div>
+                </div>
+                <div id="pseudocode-container-wrapper" class="pseudocode-container-wrapper">
+                    <div id="pseudocode-panel" class="pseudocode-panel">
+                        <div class="pseudocode-header">
+                            <span>📖 Canonical Pseudocode (A)</span>
+                            <span id="pseudocode-algo-title" class="pseudocode-algo-title">Bubble Sort</span>
+                        </div>
+                        <div id="pseudocode-body" class="pseudocode-body"></div>
+                    </div>
+                    <div id="pseudocode-panel-b" class="pseudocode-panel pseudocode-panel-b" style="display:none;">
+                        <div class="pseudocode-header">
+                            <span>🏎️ Pseudocode (B)</span>
+                            <span id="pseudocode-algo-title-b" class="pseudocode-algo-title">Bubble Sort</span>
+                        </div>
+                        <div id="pseudocode-body-b" class="pseudocode-body"></div>
+                    </div>
                 </div>
                 <div id="viz-wrapper" class="viz-wrapper">
                     <div class="viz-side" id="viz-side-a">

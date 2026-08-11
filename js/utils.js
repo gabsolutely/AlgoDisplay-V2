@@ -68,6 +68,67 @@ window.utils = {
     };
   },
   
+  // Drag helper for floating elements
+  makeDraggable: function(elmnt, dragHandle) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const handle = dragHandle || elmnt;
+    handle.style.cursor = "move";
+
+    handle.onmousedown = dragMouseDown;
+    handle.ontouchstart = dragTouchStart;
+
+    function dragMouseDown(e) {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+      elmnt.style.position = "absolute";
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+
+    function dragTouchStart(e) {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      pos3 = touch.clientX;
+      pos4 = touch.clientY;
+      document.ontouchend = closeTouchDrag;
+      document.ontouchmove = touchDrag;
+    }
+
+    function touchDrag(e) {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      pos1 = pos3 - touch.clientX;
+      pos2 = pos4 - touch.clientY;
+      pos3 = touch.clientX;
+      pos4 = touch.clientY;
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+      elmnt.style.position = "absolute";
+    }
+
+    function closeTouchDrag() {
+      document.ontouchend = null;
+      document.ontouchmove = null;
+    }
+  },
+
   // Logger
   logger: {
     info: function(msg) {

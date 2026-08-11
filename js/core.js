@@ -111,6 +111,9 @@ class AlgorithmVisualizer {
       pseudocodePanel: document.getElementById("pseudocode-panel"),
       pseudocodeTitle: document.getElementById("pseudocode-algo-title"),
       pseudocodeBody: document.getElementById("pseudocode-body"),
+      pseudocodePanelB: document.getElementById("pseudocode-panel-b"),
+      pseudocodeTitleB: document.getElementById("pseudocode-algo-title-b"),
+      pseudocodeBodyB: document.getElementById("pseudocode-body-b"),
       graphOnlyGroups: Array.from(document.querySelectorAll(".graph-only")),
       gridOnlyGroups: Array.from(document.querySelectorAll(".grid-only")),
       graphPresetSelect: document.getElementById("graph-preset-select"),
@@ -151,6 +154,15 @@ class AlgorithmVisualizer {
       this.generateArray();
     }
     this.initComplexityOverlay();
+
+    if (window.utils && window.utils.makeDraggable) {
+      if (this.elements.pseudocodePanel) {
+        window.utils.makeDraggable(this.elements.pseudocodePanel, this.elements.pseudocodePanel.querySelector('.pseudocode-header'));
+      }
+      if (this.elements.pseudocodePanelB) {
+        window.utils.makeDraggable(this.elements.pseudocodePanelB, this.elements.pseudocodePanelB.querySelector('.pseudocode-header'));
+      }
+    }
     console.log("AlgoDisplay ready");
   }
   
@@ -834,6 +846,117 @@ while (left <= right) {
 log("Target not found");
 return -1;`,
         },
+        graph: {
+          bfs: `// Graph / Tree BFS (Breadth-First Search)
+const nodes = getNodes();
+if (nodes.length === 0) return;
+const startId = nodes[0].id;
+const queue = [startId];
+const visited = new Set([startId]);
+
+while (queue.length > 0) {
+  const current = queue.shift();
+  await visitNode(current, "visiting");
+  const neighbors = getNeighbors(current);
+  for (const n of neighbors) {
+    if (!visited.has(n.id)) {
+      visited.add(n.id);
+      queue.push(n.id);
+    }
+  }
+}`,
+          dfs: `// Graph / Tree DFS (Depth-First Search)
+const nodes = getNodes();
+if (nodes.length === 0) return;
+const visited = new Set();
+async function dfs(u) {
+  visited.add(u);
+  await visitNode(u, "visiting");
+  const neighbors = getNeighbors(u);
+  for (const n of neighbors) {
+    if (!visited.has(n.id)) {
+      await dfs(n.id);
+    }
+  }
+}
+await dfs(nodes[0].id);`,
+          dijkstra: `// Graph Dijkstra Shortest Path
+const nodes = getNodes();
+if (nodes.length === 0) return;
+const dist = {};
+const visited = new Set();
+nodes.forEach(n => dist[n.id] = Infinity);
+dist[nodes[0].id] = 0;
+
+while (visited.size < nodes.length) {
+  let minNode = null, minDist = Infinity;
+  nodes.forEach(n => {
+    if (!visited.has(n.id) && dist[n.id] < minDist) {
+      minDist = dist[n.id];
+      minNode = n.id;
+    }
+  });
+  if (minNode === null) break;
+  visited.add(minNode);
+  await visitNode(minNode, "visiting");
+  const neighbors = getNeighbors(minNode);
+  for (const n of neighbors) {
+    if (dist[minNode] + n.weight < dist[n.id]) {
+      dist[n.id] = dist[minNode] + n.weight;
+    }
+  }
+}`,
+          astar: `// A* Graph Search
+const nodes = getNodes();
+if (nodes.length === 0) return;
+for (const n of nodes) {
+  await visitNode(n.id, "visiting");
+}`
+        },
+        grid: {
+          bfs: `// Grid BFS Pathfinding
+const start = getStartCell();
+const target = getTargetCell();
+if (!start || !target) return;
+const queue = [start];
+const visited = new Set([\`\${start.r},\${start.c}\`]);
+
+while (queue.length > 0) {
+  const current = queue.shift();
+  await visitGridCell(current.r, current.c, "visiting");
+  if (current.r === target.r && current.c === target.c) {
+    log("Target reached!");
+    return;
+  }
+  const neighbors = getGridNeighbors(current.r, current.c);
+  for (const n of neighbors) {
+    const key = \`\${n.r},\${n.c}\`;
+    if (!visited.has(key)) {
+      visited.add(key);
+      queue.push(n);
+    }
+  }
+}`,
+          dfs: `// Grid DFS Pathfinding
+const start = getStartCell();
+const target = getTargetCell();
+if (!start || !target) return;
+const visited = new Set();
+
+async function dfsGrid(r, c) {
+  const key = \`\${r},\${c}\`;
+  if (visited.has(key)) return false;
+  visited.add(key);
+  await visitGridCell(r, c, "visiting");
+  if (r === target.r && c === target.c) return true;
+  const neighbors = getGridNeighbors(r, c);
+  for (const n of neighbors) {
+    if (await dfsGrid(n.r, n.c)) return true;
+  }
+  return false;
+}
+await dfsGrid(start.r, start.c);`
+        }
       },
       python: {
         sort: {
@@ -1222,6 +1345,28 @@ async def search(arr, target):
     this.elements.resumeBtn.style.display = "none";
     this.elements.stepBtn.textContent = "Step Mode";
     this.elements.actionControls.innerHTML = "";
+
+    if (this.currentCategory === "graph") {
+      const gPreset = this.elements.graphPresetSelect ? this.elements.graphPresetSelect.value : "tree";
+      this.graphEngine.generatePreset(gPreset);
+      this.graphRenderer.init(this.elements.container, this.graphEngine);
+      this.graphRenderer.render();
+      this.history = [];
+      this.saveSnapshot("init_graph");
+      this.log(`⚡ Generated ${gPreset.toUpperCase()} graph preset`);
+      return;
+    } else if (this.currentCategory === "grid") {
+      this.graphEngine.initGrid();
+      this.gridRenderer.init(this.elements.container, this.graphEngine);
+      this.gridRenderer.render();
+      this.history = [];
+      this.saveSnapshot("init_grid");
+      this.log(`⚡ Generated Grid`);
+      return;
+    }
+
+    this.renderer = new ArrayRenderer();
+    this.renderer.init(this.elements.container);
 
     if (preset === "custom" && this.elements.customArrayInput) {
       const parsed = this.parseCustomArray(this.elements.customArrayInput.value);
@@ -1784,8 +1929,8 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        this.highlightPseudocode('compare', side);
         if (isA) {
-          this.highlightPseudocode('compare');
           this.saveSnapshot('compare');
         }
         this.log(`${tag} Comparing indices ${i} and ${j}`);
@@ -1807,8 +1952,8 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        this.highlightPseudocode('swap', side);
         if (isA) {
-          this.highlightPseudocode('swap');
           this.saveSnapshot('swap');
         }
         this.log(`${tag} Swapping indices ${i} and ${j}`);
@@ -1837,8 +1982,8 @@ async def search(arr, target):
 
       markFound: async (i) => {
         if (this.shouldStop) return;
+        this.highlightPseudocode('found', side);
         if (isA) {
-          this.highlightPseudocode('found');
           this.saveSnapshot('found');
         }
         this.log(`${tag} Found match at index ${i}`);
@@ -2007,6 +2152,8 @@ async def search(arr, target):
     } else {
       const asyncFunction = new Function(
         'arr', 'compare', 'swap', 'renderArray', 'sleep', 'log', 'markFound',
+        'visitNode', 'getNeighbors', 'getNodes', 'markPath',
+        'visitGridCell', 'getStartCell', 'getTargetCell', 'getGridNeighbors',
         `
         return (async () => {
           ${code}
@@ -2021,7 +2168,15 @@ async def search(arr, target):
         api.renderArray,
         api.sleep,
         api.log,
-        api.markFound
+        api.markFound,
+        api.visitNode,
+        api.getNeighbors,
+        api.getNodes,
+        api.markPath,
+        api.visitGridCell,
+        api.getStartCell,
+        api.getTargetCell,
+        api.getGridNeighbors
       );
       if (result && Array.isArray(result)) {
         runtimeArr = result;
@@ -2257,6 +2412,10 @@ async def search(arr, target):
     overlay.querySelector('.complexity-close').onclick = () => {
       overlay.classList.remove('visible');
     };
+
+    if (window.utils && window.utils.makeDraggable) {
+      window.utils.makeDraggable(overlay, overlay.querySelector('.complexity-header'));
+    }
 
     this.complexityCanvas = document.getElementById('complexity-canvas');
     this.complexityCtx = this.complexityCanvas ? this.complexityCanvas.getContext('2d') : null;
@@ -2539,17 +2698,28 @@ async def search(arr, target):
   renderPseudocode(algo) {
     if (!this.elements.pseudocodeBody) return;
     const opts = this.elements.algorithmSelect?.options;
-    const title = opts ? opts[this.elements.algorithmSelect.selectedIndex]?.textContent : algo;
-    this.pseudocodeManager.renderPseudocode(this.elements.pseudocodeBody, this.currentCategory, algo, title || algo);
+    const titleA = opts ? opts[this.elements.algorithmSelect.selectedIndex]?.textContent : algo;
+    this.pseudocodeManager.renderPseudocode(this.elements.pseudocodeBody, this.currentCategory, algo, titleA || algo, this.elements.pseudocodeTitle);
+
+    if (this.raceMode && this.elements.pseudocodeBodyB) {
+      if (this.elements.pseudocodePanelB) this.elements.pseudocodePanelB.style.display = "";
+      const optsB = this.elements.algorithmSelectB?.options;
+      const titleB = optsB ? optsB[this.elements.algorithmSelectB.selectedIndex]?.textContent : this.currentAlgorithmB;
+      this.pseudocodeManager.renderPseudocode(this.elements.pseudocodeBodyB, this.currentCategory, this.currentAlgorithmB, titleB || this.currentAlgorithmB, this.elements.pseudocodeTitleB);
+    } else if (this.elements.pseudocodePanelB) {
+      this.elements.pseudocodePanelB.style.display = "none";
+    }
   }
 
-  highlightPseudocode(lineNumOrOpType) {
-    if (!this.elements.pseudocodeBody) return;
+  highlightPseudocode(lineNumOrOpType, side = 'a') {
+    const targetBody = side === 'b' ? this.elements.pseudocodeBodyB : this.elements.pseudocodeBody;
+    if (!targetBody) return;
+
     if (typeof lineNumOrOpType === "number") {
-      this.pseudocodeManager.highlightLine(this.elements.pseudocodeBody, lineNumOrOpType);
-      this.currentPseudocodeLine = lineNumOrOpType;
+      this.pseudocodeManager.highlightLine(targetBody, lineNumOrOpType);
+      if (side === 'a') this.currentPseudocodeLine = lineNumOrOpType;
     } else {
-      const lines = this.elements.pseudocodeBody.querySelectorAll('.pseudocode-line');
+      const lines = targetBody.querySelectorAll('.pseudocode-line');
       if (!lines.length) return;
       lines.forEach(el => el.classList.remove('active'));
       let targetIdx = 0;
@@ -2558,9 +2728,12 @@ async def search(arr, target):
       else if (lineNumOrOpType === 'found') targetIdx = 3;
       else targetIdx = (this.currentPseudocodeLine + 1) % lines.length;
 
-      lines[targetIdx]?.classList.add('active');
-      this.currentPseudocodeLine = targetIdx;
-      lines[targetIdx]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      const lineEl = lines[targetIdx];
+      if (lineEl) {
+        lineEl.classList.add('active');
+        if (side === 'a') this.currentPseudocodeLine = targetIdx;
+        targetBody.scrollTop = lineEl.offsetTop - targetBody.clientHeight / 2 + lineEl.clientHeight / 2;
+      }
     }
   }
 
@@ -2588,6 +2761,15 @@ async def search(arr, target):
       this.showToast("ℹ️ At starting state — cannot step back further.");
       return;
     }
+    this.shouldStop = true;
+    this.isRunning = false;
+    this.isPaused = true;
+    this._generation += 1;
+
+    this.elements.runBtn.style.display = "inline-block";
+    this.elements.pauseBtn.style.display = "none";
+    this.elements.resumeBtn.style.display = "none";
+
     this.history.pop();
     const prev = this.history[this.history.length - 1];
     if (!prev) return;
@@ -2619,7 +2801,7 @@ async def search(arr, target):
     }
 
     this.updateStepBackBtn();
-    this.log("⬅️ Stepped back one operation");
+    this.log("⬅️ Stepped back one operation (state saved for re-run)");
   }
 
   updateStepBackBtn() {

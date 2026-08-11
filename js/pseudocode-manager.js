@@ -273,12 +273,12 @@ class PseudocodeManager {
     return catObj[algorithm] || catObj.bubble || ["// Pseudocode unavailable"];
   }
 
-  renderPseudocode(container, category, algorithm, algoTitle = "") {
+  renderPseudocode(container, category, algorithm, algoTitle = "", titleElOverride = null) {
     if (!container) return;
     const lines = this.getPseudocode(category, algorithm);
     
     // Title label
-    const titleEl = document.getElementById("pseudocode-algo-title");
+    const titleEl = titleElOverride || document.getElementById("pseudocode-algo-title");
     if (titleEl && algoTitle) {
       titleEl.textContent = algoTitle;
     }
@@ -309,7 +309,11 @@ class PseudocodeManager {
     lines.forEach((line) => {
       if (parseInt(line.dataset.line) === lineNumber) {
         line.classList.add("active");
-        line.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        // Scroll inside container only, DO NOT use scrollIntoView to prevent page jump
+        const lineTop = line.offsetTop;
+        const lineH = line.clientHeight;
+        const containerH = container.clientHeight;
+        container.scrollTop = lineTop - containerH / 2 + lineH / 2;
       } else {
         line.classList.remove("active");
       }

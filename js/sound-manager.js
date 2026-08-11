@@ -96,6 +96,7 @@ class SoundManager {
 
   play(type) {
     if (!this.enabled || !this.audioContext || this.volume <= 0) return;
+    this._resume();
 
     if (type === 'complete' && this.musicalMode) {
       this.playArpeggio();
