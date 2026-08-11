@@ -37,6 +37,10 @@ class AlgorithmVisualizer {
       endTime: 0
     };
     
+    // Step-back history & Pseudocode tracking
+    this.history = [];
+    this.currentPseudocodeLine = 0;
+    
     // DOM elements cache
     this.elements = {
       container: document.getElementById("visualizer"),
@@ -103,11 +107,26 @@ class AlgorithmVisualizer {
       nearlySpreadVal: document.getElementById("nearly-spread-val"),
       shareBtn: document.getElementById("share-btn"),
       complexityBtn: document.getElementById("complexity-btn"),
+      stepBackBtn: document.getElementById("step-back-btn"),
+      pseudocodePanel: document.getElementById("pseudocode-panel"),
+      pseudocodeTitle: document.getElementById("pseudocode-algo-title"),
+      pseudocodeBody: document.getElementById("pseudocode-body"),
+      graphOnlyGroups: Array.from(document.querySelectorAll(".graph-only")),
+      gridOnlyGroups: Array.from(document.querySelectorAll(".grid-only")),
+      graphPresetSelect: document.getElementById("graph-preset-select"),
+      directedToggle: document.getElementById("directed-toggle"),
+      mazeGenBtn: document.getElementById("maze-gen-btn"),
+      clearWallsBtn: document.getElementById("clear-walls-btn"),
     };
     
     console.log("Elements found:", this.validateElements());
     
     // Initialize subsystems
+    this.pseudocodeManager = new PseudocodeManager();
+    this.graphEngine = new GraphEngine();
+    this.graphRenderer = new GraphRenderer();
+    this.gridRenderer = new GridRenderer();
+
     this.renderer = new ArrayRenderer();
     this.renderer.init(this.elements.container);
     this.rendererB = new ArrayRenderer();
@@ -175,10 +194,39 @@ class AlgorithmVisualizer {
 
     this.elements.categorySelect.onchange = () => {
       this.currentCategory = this.elements.categorySelect.value;
-      this.refreshAlgorithmOptions();
-      this.refreshAlgorithmSelectB();
-      this.setExampleCode();
+      this.onCategoryChange();
     };
+
+    if (this.elements.graphPresetSelect) {
+      this.elements.graphPresetSelect.onchange = () => {
+        const p = this.elements.graphPresetSelect.value;
+        this.graphEngine.generatePreset(p);
+        this.graphRenderer.render();
+      };
+    }
+
+    if (this.elements.directedToggle) {
+      this.elements.directedToggle.onchange = () => {
+        this.graphEngine.setDirected(this.elements.directedToggle.checked);
+        this.graphRenderer.render();
+      };
+    }
+
+    if (this.elements.mazeGenBtn) {
+      this.elements.mazeGenBtn.onclick = () => {
+        this.graphEngine.generateRecursiveMaze();
+        this.gridRenderer.render();
+        this.log("⚡ Generated Recursive Backtracking Maze!");
+      };
+    }
+
+    if (this.elements.clearWallsBtn) {
+      this.elements.clearWallsBtn.onclick = () => {
+        this.graphEngine.clearGridWalls();
+        this.gridRenderer.render();
+        this.log("🧹 Cleared all grid walls.");
+      };
+    }
 
     this.elements.languageSelect.onchange = () => {
       this.currentLanguage = this.elements.languageSelect.value;
@@ -386,6 +434,42 @@ class AlgorithmVisualizer {
         if (willShow) this.renderComplexityChart();
       };
     }
+
+    if (this.elements.stepBackBtn) {
+      this.elements.stepBackBtn.onclick = () => this.stepBack();
+    }
+  }
+
+  onCategoryChange() {
+    const isSearch = this.currentCategory === "search";
+    const isGraph = this.currentCategory === "graph";
+    const isGrid = this.currentCategory === "grid";
+
+    if (this.elements.searchOnlyGroups) {
+      this.elements.searchOnlyGroups.forEach(el => el.style.display = isSearch ? "" : "none");
+    }
+    if (this.elements.graphOnlyGroups) {
+      this.elements.graphOnlyGroups.forEach(el => el.style.display = isGraph ? "" : "none");
+    }
+    if (this.elements.gridOnlyGroups) {
+      this.elements.gridOnlyGroups.forEach(el => el.style.display = isGrid ? "" : "none");
+    }
+
+    if (isGraph) {
+      this.graphEngine.generatePreset(this.elements.graphPresetSelect?.value || "random");
+      this.graphRenderer.init(this.elements.container, this.graphEngine);
+    } else if (isGrid) {
+      this.graphEngine.initGrid();
+      this.gridRenderer.init(this.elements.container, this.graphEngine);
+    } else {
+      this.renderer = new ArrayRenderer();
+      this.renderer.init(this.elements.container);
+      this.generateArray();
+    }
+
+    this.refreshAlgorithmOptions();
+    this.refreshAlgorithmSelectB();
+    this.setExampleCode();
   }
 
   refreshAlgorithmOptions() {
@@ -410,6 +494,22 @@ class AlgorithmVisualizer {
         ["exponential", "Exponential Search"],
         ["ternary", "Ternary Search"],
       ],
+      graph: [
+        ["bfs", "BFS (Breadth-First Search)"],
+        ["dfs", "DFS (Depth-First Search)"],
+        ["dijkstra", "Dijkstra's Shortest Path"],
+        ["astar", "A* Search Algorithm"],
+        ["bellman_ford", "Bellman-Ford Algorithm"],
+        ["prim", "Prim's MST"],
+        ["kruskal", "Kruskal's MST"],
+        ["toposort", "Topological Sort"],
+      ],
+      grid: [
+        ["bfs", "Grid BFS Pathfinding"],
+        ["dfs", "Grid DFS Pathfinding"],
+        ["dijkstra", "Grid Dijkstra Pathfinding"],
+        ["astar", "Grid A* Pathfinding"],
+      ],
     };
     const list = opts[this.currentCategory] || opts.sort;
     const prev = this.currentAlgorithm;
@@ -424,12 +524,6 @@ class AlgorithmVisualizer {
     const keep = prev && values.includes(prev);
     this.currentAlgorithm = keep ? prev : list[0][0];
     select.value = this.currentAlgorithm;
-    if (this.elements.searchOnlyGroups) {
-      const show = this.currentCategory === "search";
-      this.elements.searchOnlyGroups.forEach(el => {
-        el.style.display = show ? "" : "none";
-      });
-    }
   }
 
   refreshAlgorithmSelectB() {
@@ -454,6 +548,18 @@ class AlgorithmVisualizer {
         ["exponential", "Exponential Search"],
         ["ternary", "Ternary Search"],
       ],
+      graph: [
+        ["bfs", "BFS"],
+        ["dfs", "DFS"],
+        ["dijkstra", "Dijkstra"],
+        ["astar", "A* Search"],
+      ],
+      grid: [
+        ["bfs", "Grid BFS"],
+        ["dfs", "Grid DFS"],
+        ["dijkstra", "Grid Dijkstra"],
+        ["astar", "Grid A*"],
+      ],
     };
     const list = opts[this.currentCategory] || opts.sort;
     const prev = this.currentAlgorithmB;
@@ -474,6 +580,8 @@ class AlgorithmVisualizer {
     const language = this.currentLanguage;
     const category = this.currentCategory;
     const algorithm = this.currentAlgorithm;
+
+    this.renderPseudocode(algorithm);
 
     const templates = {
       javascript: {
@@ -1676,6 +1784,10 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        if (isA) {
+          this.highlightPseudocode('compare');
+          this.saveSnapshot('compare');
+        }
         this.log(`${tag} Comparing indices ${i} and ${j}`);
         if (isA) this.updateOperationInfo(`A: Comparing ${i},${j}`);
         const arr = getArr();
@@ -1695,6 +1807,10 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        if (isA) {
+          this.highlightPseudocode('swap');
+          this.saveSnapshot('swap');
+        }
         this.log(`${tag} Swapping indices ${i} and ${j}`);
         if (isA) this.updateOperationInfo(`${tag} Swapping ${i},${j}`);
         await renderer.animatedSwap(arrRef, i, j, this.speed);
@@ -1713,17 +1829,117 @@ async def search(arr, target):
         this.updateStats();
         setArr(arrRef);
         renderer.render(getArr());
+        if (isA) {
+          this.saveSnapshot('render');
+        }
         await this.sleep(this.speed / 2);
       },
 
       markFound: async (i) => {
         if (this.shouldStop) return;
+        if (isA) {
+          this.highlightPseudocode('found');
+          this.saveSnapshot('found');
+        }
         this.log(`${tag} Found match at index ${i}`);
         if (isA) this.updateOperationInfo(`${tag} Found at ${i}`);
         renderer.markFound(i);
         if (isA) this.sounds.play('complete');
         await this.sleep(this.speed);
       },
+
+      visitNode: async (nodeId, color = "visiting") => {
+        if (this.shouldStop) return;
+        statsObj.steps++;
+        this.updateStats();
+        const node = this.graphEngine.nodes.find(n => n.id === nodeId || n.label === String(nodeId));
+        if (node) {
+          node.status = color;
+          this.graphRenderer.render();
+          if (this.musicalMode) {
+            this.sounds.playMusical(node.id * 10, 50, [10, 20, 30, 40, 50, 60, 70, 80]);
+          } else {
+            this.sounds.play("compare");
+          }
+        }
+        if (isA) {
+          this.highlightPseudocode(4);
+          this.saveSnapshot("visitNode");
+        }
+        await this.sleep(this.speed);
+      },
+
+      visitEdge: async (fromId, toId, color = "exploring") => {
+        if (this.shouldStop) return;
+        statsObj.steps++;
+        this.updateStats();
+        const edge = this.graphEngine.edges.find(e => 
+          (e.source === fromId && e.target === toId) ||
+          (!this.graphEngine.isDirected && e.source === toId && e.target === fromId)
+        );
+        if (edge) {
+          edge.status = color;
+          this.graphRenderer.render();
+        }
+        if (isA) {
+          this.highlightPseudocode(5);
+          this.saveSnapshot("visitEdge");
+        }
+        await this.sleep(this.speed / 2);
+      },
+
+      updateDistance: async (nodeId, distance) => {
+        if (this.shouldStop) return;
+        const node = this.graphEngine.nodes.find(n => n.id === nodeId || n.label === String(nodeId));
+        if (node) {
+          node.distance = distance;
+          this.graphRenderer.render();
+        }
+        if (isA) {
+          this.saveSnapshot("updateDistance");
+        }
+        await this.sleep(this.speed / 2);
+      },
+
+      markPath: async (pathNodes) => {
+        if (this.shouldStop) return;
+        if (Array.isArray(pathNodes)) {
+          pathNodes.forEach(id => {
+            const n = this.graphEngine.nodes.find(node => node.id === id || node.label === String(id));
+            if (n) n.status = "path";
+          });
+          this.graphRenderer.render();
+        }
+        if (isA) {
+          this.sounds.play("complete");
+          this.saveSnapshot("markPath");
+        }
+        await this.sleep(this.speed);
+      },
+
+      visitGridCell: async (r, c, type = "visiting") => {
+        if (this.shouldStop) return;
+        statsObj.steps++;
+        this.updateStats();
+        if (this.graphEngine.grid[r] && this.graphEngine.grid[r][c]) {
+          const cell = this.graphEngine.grid[r][c];
+          if (cell.type !== "start" && cell.type !== "target") {
+            cell.type = type;
+          }
+          this.gridRenderer.render();
+        }
+        if (isA) {
+          this.highlightPseudocode(4);
+          this.saveSnapshot("visitGridCell");
+        }
+        await this.sleep(this.speed / 2);
+      },
+
+      getNeighbors: (nodeId) => this.graphEngine.getNeighbors(nodeId),
+      getNodes: () => this.graphEngine.nodes,
+      getStartCell: () => this.graphEngine.startCell,
+      getTargetCell: () => this.graphEngine.targetCell,
+      getGridNeighbors: (r, c) => this.graphEngine.getGridNeighbors(r, c),
 
       sleep: async (ms) => {
         await this.sleep(ms);
@@ -2214,6 +2430,202 @@ async def search(arr, target):
         }
       }
       legend.innerHTML = html;
+    }
+  }
+
+  // ─── Pseudocode & History (Step Back) ────────────────────────
+  getPseudocode(algo) {
+    const codeMap = {
+      bubble: [
+        "for i = 0 to n-1:",
+        "  for j = 0 to n-i-2:",
+        "    if arr[j] > arr[j+1]:",
+        "      swap(arr[j], arr[j+1])"
+      ],
+      selection: [
+        "for i = 0 to n-1:",
+        "  minIdx = i",
+        "  for j = i+1 to n-1:",
+        "    if arr[j] < arr[minIdx]: minIdx = j",
+        "  if minIdx != i:",
+        "    swap(arr[i], arr[minIdx])"
+      ],
+      insertion: [
+        "for i = 1 to n-1:",
+        "  key = arr[i]",
+        "  j = i - 1",
+        "  while j >= 0 and arr[j] > key:",
+        "    arr[j+1] = arr[j]",
+        "  arr[j+1] = key"
+      ],
+      merge: [
+        "function mergeSort(arr, l, r):",
+        "  if l >= r: return",
+        "  mid = (l + r) / 2",
+        "  mergeSort(arr, l, mid)",
+        "  mergeSort(arr, mid+1, r)",
+        "  merge(arr, l, mid, r)"
+      ],
+      quick: [
+        "function quickSort(arr, low, high):",
+        "  if low < high:",
+        "    p = partition(arr, low, high)",
+        "    quickSort(arr, low, p-1)",
+        "    quickSort(arr, p+1, high)"
+      ],
+      heap: [
+        "buildMaxHeap(arr)",
+        "for i = n-1 down to 1:",
+        "  swap(arr[0], arr[i])",
+        "  maxHeapify(arr, 0, i)"
+      ],
+      shell: [
+        "for gap = n/2 down to 1:",
+        "  for i = gap to n-1:",
+        "    temp = arr[i]",
+        "    compare(j - gap, i)",
+        "    swap(j - gap, j)"
+      ],
+      cocktail: [
+        "do:",
+        "  for i = start to end-1: compare & swap(i, i+1)",
+        "  for i = end-1 down to start: compare & swap(i, i+1)",
+        "while swapped"
+      ],
+      counting: [
+        "count = array of size range",
+        "for each x in arr: count[x]++",
+        "reconstruct arr from frequency count"
+      ],
+      radix: [
+        "maxVal = getMax(arr)",
+        "for exp = 1; maxVal/exp > 0; exp *= 10:",
+        "  countSortByDigit(arr, exp)"
+      ],
+      linear: [
+        "for i = 0 to n-1:",
+        "  if arr[i] == target:",
+        "    return i (found!)",
+        "return -1 (not found)"
+      ],
+      binary: [
+        "low = 0, high = n-1",
+        "while low <= high:",
+        "  mid = (low + high) / 2",
+        "  if arr[mid] == target: return mid",
+        "  else if arr[mid] < target: low = mid + 1",
+        "  else: high = mid - 1"
+      ],
+      interpolation: [
+        "low = 0, high = n-1",
+        "pos = low + (target - arr[low]) * (high-low)/(arr[high]-arr[low])",
+        "if arr[pos] == target: return pos"
+      ],
+      exponential: [
+        "if arr[0] == target: return 0",
+        "i = 1",
+        "while i < n and arr[i] <= target: i *= 2",
+        "return binarySearch(arr, i/2, min(i, n-1))"
+      ],
+      ternary: [
+        "mid1 = l + (r-l)/3, mid2 = r - (r-l)/3",
+        "if arr[mid1] == target: return mid1",
+        "if arr[mid2] == target: return mid2"
+      ]
+    };
+    return codeMap[algo] || codeMap.bubble;
+  }
+
+  renderPseudocode(algo) {
+    if (!this.elements.pseudocodeBody) return;
+    const opts = this.elements.algorithmSelect?.options;
+    const title = opts ? opts[this.elements.algorithmSelect.selectedIndex]?.textContent : algo;
+    this.pseudocodeManager.renderPseudocode(this.elements.pseudocodeBody, this.currentCategory, algo, title || algo);
+  }
+
+  highlightPseudocode(lineNumOrOpType) {
+    if (!this.elements.pseudocodeBody) return;
+    if (typeof lineNumOrOpType === "number") {
+      this.pseudocodeManager.highlightLine(this.elements.pseudocodeBody, lineNumOrOpType);
+      this.currentPseudocodeLine = lineNumOrOpType;
+    } else {
+      const lines = this.elements.pseudocodeBody.querySelectorAll('.pseudocode-line');
+      if (!lines.length) return;
+      lines.forEach(el => el.classList.remove('active'));
+      let targetIdx = 0;
+      if (lineNumOrOpType === 'compare') targetIdx = 2;
+      else if (lineNumOrOpType === 'swap') targetIdx = 3;
+      else if (lineNumOrOpType === 'found') targetIdx = 3;
+      else targetIdx = (this.currentPseudocodeLine + 1) % lines.length;
+
+      lines[targetIdx]?.classList.add('active');
+      this.currentPseudocodeLine = targetIdx;
+      lines[targetIdx]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  saveSnapshot(tag = 'step') {
+    if (this.history.length > 500) this.history.shift();
+    this.history.push({
+      category: this.currentCategory,
+      array: [...this.array],
+      arrayB: [...this.arrayB],
+      stats: { ...this.stats },
+      statsB: { ...this.statsB },
+      sortedIndices: new Set(this.renderer.sortedIndices || []),
+      sortedIndicesB: this.rendererB ? new Set(this.rendererB.sortedIndices || []) : new Set(),
+      graphNodes: this.currentCategory === "graph" ? JSON.parse(JSON.stringify(this.graphEngine.nodes)) : null,
+      graphEdges: this.currentCategory === "graph" ? JSON.parse(JSON.stringify(this.graphEngine.edges)) : null,
+      grid: this.currentCategory === "grid" ? JSON.parse(JSON.stringify(this.graphEngine.grid)) : null,
+      pseudocodeLine: this.currentPseudocodeLine,
+      tag: tag
+    });
+    this.updateStepBackBtn();
+  }
+
+  stepBack() {
+    if (this.history.length <= 1) {
+      this.showToast("ℹ️ At starting state — cannot step back further.");
+      return;
+    }
+    this.history.pop();
+    const prev = this.history[this.history.length - 1];
+    if (!prev) return;
+
+    this.array = [...prev.array];
+    this.arrayB = [...prev.arrayB];
+    this.stats = { ...prev.stats };
+    this.statsB = { ...prev.statsB };
+    if (this.renderer.sortedIndices) this.renderer.sortedIndices = new Set(prev.sortedIndices);
+    if (this.rendererB && this.rendererB.sortedIndices) this.rendererB.sortedIndices = new Set(prev.sortedIndicesB);
+
+    if (prev.category === "graph" && prev.graphNodes) {
+      this.graphEngine.nodes = JSON.parse(JSON.stringify(prev.graphNodes));
+      this.graphEngine.edges = JSON.parse(JSON.stringify(prev.graphEdges));
+      this.graphRenderer.render();
+    } else if (prev.category === "grid" && prev.grid) {
+      this.graphEngine.grid = JSON.parse(JSON.stringify(prev.grid));
+      this.gridRenderer.render();
+    } else {
+      this.renderer.render(this.array);
+      if (this.raceMode && this.rendererB) this.rendererB.render(this.arrayB);
+    }
+
+    this.updateStats();
+    this.updateComplexityData();
+
+    if (this.elements.pseudocodeBody) {
+      this.pseudocodeManager.highlightLine(this.elements.pseudocodeBody, prev.pseudocodeLine);
+    }
+
+    this.updateStepBackBtn();
+    this.log("⬅️ Stepped back one operation");
+  }
+
+  updateStepBackBtn() {
+    if (this.elements.stepBackBtn) {
+      const canBack = this.history.length > 1;
+      this.elements.stepBackBtn.style.display = canBack ? "inline-block" : "none";
     }
   }
 }

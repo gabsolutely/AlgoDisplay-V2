@@ -47,6 +47,8 @@
                                 <select id="category-select" class="btn btn-primary">
                                     <option value="sort">Sorting</option>
                                     <option value="search">Searching</option>
+                                    <option value="graph">Graph Algorithms</option>
+                                    <option value="grid">Grid / Maze Mode</option>
                                 </select>
                             </div>
                             <div class="control-group">
@@ -107,6 +109,26 @@
                                     <span class="toggle-slider"></span>
                                     Pre-Sort
                                 </label>
+                            </div>
+                            <div class="control-group graph-only" style="display:none;">
+                                <label for="graph-preset-select">Preset:</label>
+                                <select id="graph-preset-select" class="btn btn-primary">
+                                    <option value="random">Random Graph</option>
+                                    <option value="tree">Binary Tree</option>
+                                    <option value="dag">Directed DAG</option>
+                                    <option value="negative">Negative Weights</option>
+                                </select>
+                            </div>
+                            <div class="control-group graph-only" style="display:none;">
+                                <label for="directed-toggle" class="toggle-label">
+                                    <input type="checkbox" id="directed-toggle">
+                                    <span class="toggle-slider"></span>
+                                    Directed
+                                </label>
+                            </div>
+                            <div class="control-group grid-only" style="display:none;">
+                                <button id="maze-gen-btn" class="btn btn-warning" title="Generate Maze">⚡ Maze</button>
+                                <button id="clear-walls-btn" class="btn btn-secondary" title="Clear Walls">🧹 Clear Walls</button>
                             </div>
                         </div>
                     </div>
@@ -230,7 +252,16 @@
                     </div>
                 </div>
                 <div class="editor-container">
-                    <textarea id="code-editor" class="code-editor" placeholder="Write your sorting algorithm here..."></textarea>
+                    <div class="editor-workspace">
+                        <textarea id="code-editor" class="code-editor" placeholder="Write your sorting algorithm here..."></textarea>
+                        <div id="pseudocode-panel" class="pseudocode-panel">
+                            <div class="pseudocode-header">
+                                <span>📖 Canonical Pseudocode</span>
+                                <span id="pseudocode-algo-title" class="pseudocode-algo-title">Bubble Sort</span>
+                            </div>
+                            <div id="pseudocode-body" class="pseudocode-body"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="help-panel" class="help-panel" style="display: none;">
                     <h3>📝 How to Write Your Own Algorithms</h3>
@@ -287,6 +318,7 @@ for (let i = 0; i < arr.length - 1; i++) {
                     <button id="pause-btn" class="btn btn-warning" style="display:none;">Pause</button>
                     <button id="resume-btn" class="btn btn-info" style="display:none;">Resume</button>
                     <button id="step-btn" class="btn btn-secondary">Step Mode</button>
+                    <button id="step-back-btn" class="btn btn-secondary" style="display:none;" title="Step Backward">⬅️ Step Back</button>
                     <button id="clear-btn" class="btn btn-danger">Clear</button>
                 </div>
                 
@@ -355,7 +387,11 @@ for (let i = 0; i < arr.length - 1; i++) {
     <!-- JavaScript Files -->
     <script src="js/utils.js"></script>
     <script src="js/sound-manager.js"></script>
+    <script src="js/pseudocode-manager.js"></script>
+    <script src="js/graph-engine.js"></script>
     <script src="js/array-renderer.js"></script>
+    <script src="js/graph-renderer.js"></script>
+    <script src="js/grid-renderer.js"></script>
     <script src="js/python-runner.js"></script>
     <script src="js/core.js"></script>
     <script src="js/init.js"></script>

@@ -129,6 +129,30 @@ async def mark_found(index):
         return
     await _markFound(int(index))
 
+async def visit_node(node_id, color="visiting"):
+    if _check_stop():
+        return
+    if "_visitNode" in globals():
+        await _visitNode(int(node_id) if str(node_id).isdigit() else str(node_id), str(color))
+
+async def visit_edge(u, v, color="exploring"):
+    if _check_stop():
+        return
+    if "_visitEdge" in globals():
+        await _visitEdge(str(u), str(v), str(color))
+
+async def update_distance(node_id, dist):
+    if _check_stop():
+        return
+    if "_updateDistance" in globals():
+        await _updateDistance(str(node_id), float(dist))
+
+async def mark_path(path_nodes):
+    if _check_stop():
+        return
+    if "_markPath" in globals():
+        await _markPath(list(path_nodes))
+
 def log(msg):
     if not _check_stop():
         try:
@@ -159,6 +183,11 @@ list(arr)
 `;
 
       if (api.markFound) this.pyodide.globals.set("_markFound", api.markFound);
+      if (api.visitNode) this.pyodide.globals.set("_visitNode", api.visitNode);
+      if (api.visitEdge) this.pyodide.globals.set("_visitEdge", api.visitEdge);
+      if (api.updateDistance) this.pyodide.globals.set("_updateDistance", api.updateDistance);
+      if (api.markPath) this.pyodide.globals.set("_markPath", api.markPath);
+
       this.pyodide.globals.set("_compare", api.compare);
       this.pyodide.globals.set("_renderArray", api.renderArray);
       this.pyodide.globals.set("_swap", api.swap);
