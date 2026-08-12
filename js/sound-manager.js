@@ -7,7 +7,7 @@ class SoundManager {
     this.waveform = 'triangle';
     this.scaleName = 'pentatonic';
     this.octave = 'normal';
-    this.volume = 0.3;
+    this.volume = 0.6;
 
     this.octaves = {
       low: 0.5,
@@ -139,7 +139,7 @@ class SoundManager {
       const masterGain = this.audioContext.createGain();
       masterGain.connect(this.audioContext.destination);
       
-      const targetGain = 0.2 * this.volume;
+      const targetGain = 0.7 * this.volume;
       masterGain.gain.setValueAtTime(0.0001, now);
       masterGain.gain.linearRampToValueAtTime(targetGain, now + 0.008);
       masterGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
@@ -229,7 +229,7 @@ class SoundManager {
       const masterGain = this.audioContext.createGain();
       masterGain.connect(this.audioContext.destination);
 
-      const targetGain = 0.25 * this.volume;
+      const targetGain = 0.8 * this.volume;
       masterGain.gain.setValueAtTime(0.0001, now);
       masterGain.gain.linearRampToValueAtTime(targetGain, now + 0.01);
 
@@ -237,7 +237,7 @@ class SoundManager {
         const noteGain = this.audioContext.createGain();
         const noteStart = now + i * 0.08;
         noteGain.gain.setValueAtTime(0.0001, noteStart);
-        noteGain.gain.linearRampToValueAtTime(0.6 * this.volume, noteStart + 0.008);
+        noteGain.gain.linearRampToValueAtTime(0.8 * this.volume, noteStart + 0.008);
         noteGain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.3);
         
         this._createSynthNote(freq, noteStart, 0.3, this.waveform, noteGain);
@@ -258,7 +258,7 @@ class SoundManager {
       gain.connect(this.audioContext.destination);
 
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.3 * this.volume, now + 0.008);
+      gain.gain.linearRampToValueAtTime(0.7 * this.volume, now + 0.008);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
       this._createSynthNote(frequency, now, duration, type, gain);
@@ -289,7 +289,7 @@ class SoundManager {
         noteGain.connect(this.audioContext.destination);
         const startTime = now + idx * 0.1;
         noteGain.gain.setValueAtTime(0.0001, startTime);
-        noteGain.gain.linearRampToValueAtTime(0.3 * this.volume, startTime + 0.008);
+        noteGain.gain.linearRampToValueAtTime(0.7 * this.volume, startTime + 0.008);
         noteGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.22);
         this._createSynthNote(freq * mult, startTime, 0.22, this.waveform, noteGain);
       });

@@ -176,10 +176,7 @@ if not _check_stop():
     ${preSort}
 if not _check_stop():
     ${callLine}
-if not _check_stop():
-    await _renderArray(list(arr))
 
-list(arr)
 `;
 
       if (api.markFound) this.pyodide.globals.set("_markFound", api.markFound);

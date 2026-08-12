@@ -198,8 +198,8 @@
                                 </select>
                             </div>
                             <div class="control-group">
-                                <label for="volume-range">Vol: <span id="volume-val">30%</span></label>
-                                <input type="range" id="volume-range" min="0" max="100" value="30" style="width:75px;">
+                                <label for="volume-range">Vol: <span id="volume-val">60%</span></label>
+                                <input type="range" id="volume-range" min="0" max="100" value="60" style="width:75px;">
                             </div>
                             <button id="producer-jam-btn" class="btn btn-warning" title="Audition Sound">🎵 Jam</button>
                         </div>
@@ -252,8 +252,12 @@
                     </div>
                 </div>
                 <div class="editor-container">
+                    <div class="editor-header-bar">
+                        <span>💻 Code Editor</span>
+                        <button id="editor-expand-btn" class="btn-action" title="Toggle Code Editor Height">↕️ Expand Editor</button>
+                    </div>
                     <div class="editor-workspace">
-                        <textarea id="code-editor" class="code-editor" placeholder="Write your sorting algorithm here..."></textarea>
+                        <textarea id="code-editor" class="code-editor" placeholder="Write your algorithm here..."></textarea>
                     </div>
                 </div>
                 <div id="help-panel" class="help-panel" style="display: none;">

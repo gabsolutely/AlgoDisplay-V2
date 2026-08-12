@@ -108,6 +108,7 @@ class AlgorithmVisualizer {
       shareBtn: document.getElementById("share-btn"),
       complexityBtn: document.getElementById("complexity-btn"),
       stepBackBtn: document.getElementById("step-back-btn"),
+      editorExpandBtn: document.getElementById("editor-expand-btn"),
       pseudocodePanel: document.getElementById("pseudocode-panel"),
       pseudocodeTitle: document.getElementById("pseudocode-algo-title"),
       pseudocodeBody: document.getElementById("pseudocode-body"),
@@ -450,6 +451,13 @@ class AlgorithmVisualizer {
     if (this.elements.stepBackBtn) {
       this.elements.stepBackBtn.onclick = () => this.stepBack();
     }
+
+    if (this.elements.editorExpandBtn) {
+      this.elements.editorExpandBtn.onclick = () => {
+        const isExpanded = this.elements.editor.classList.toggle('expanded');
+        this.elements.editorExpandBtn.textContent = isExpanded ? "⏬ Collapse Editor" : "↕️ Expand Editor";
+      };
+    }
   }
 
   onCategoryChange() {
@@ -465,6 +473,16 @@ class AlgorithmVisualizer {
     }
     if (this.elements.gridOnlyGroups) {
       this.elements.gridOnlyGroups.forEach(el => el.style.display = isGrid ? "" : "none");
+    }
+
+    if (this.elements.generateBtn) {
+      if (isGraph) {
+        this.elements.generateBtn.textContent = "⚡ Generate Graph / Tree";
+      } else if (isGrid) {
+        this.elements.generateBtn.textContent = "⚡ Generate Grid";
+      } else {
+        this.elements.generateBtn.textContent = "⚡ Generate Array";
+      }
     }
 
     if (isGraph) {
@@ -1353,7 +1371,8 @@ async def search(arr, target):
       this.graphRenderer.render();
       this.history = [];
       this.saveSnapshot("init_graph");
-      this.log(`⚡ Generated ${gPreset.toUpperCase()} graph preset`);
+      this.log(`⚡ Generated new ${gPreset.toUpperCase()} structure`);
+      this.sounds.play('generate');
       return;
     } else if (this.currentCategory === "grid") {
       this.graphEngine.initGrid();
@@ -1361,7 +1380,8 @@ async def search(arr, target):
       this.gridRenderer.render();
       this.history = [];
       this.saveSnapshot("init_grid");
-      this.log(`⚡ Generated Grid`);
+      this.log(`⚡ Generated new Grid layout`);
+      this.sounds.play('generate');
       return;
     }
 
@@ -1440,6 +1460,8 @@ async def search(arr, target):
     }
 
     this.updateStats();
+    this.history = [];
+    this.saveSnapshot("init_array");
     const extra = preset === "nearly-sorted" ?
       ` (swaps=${this.elements.nearlySwapsSlider?.value ?? 30}%, spread=${this.elements.nearlySpreadSlider?.value ?? 25}%)` : "";
     this.log(`Generated array of size ${this.array.length} (preset: ${preset})${extra}`);
@@ -1752,6 +1774,10 @@ async def search(arr, target):
             for (let i = 0; i < this.array.length; i++) {
               this.renderer.markSorted(i);
             }
+          } else if (this.currentCategory === "graph") {
+            this.graphRenderer.render();
+          } else if (this.currentCategory === "grid") {
+            this.gridRenderer.render();
           }
         }
       }
@@ -2184,14 +2210,20 @@ async def search(arr, target):
     }
 
     if (this._runGeneration === runGen && !this.shouldStop) {
-      if (isA) {
-        this.array = [...runtimeArr];
-        this.renderer.render(this.array);
-        this.stats.endTime = this.stats.endTime || Date.now();
-      } else {
-        this.arrayB = [...runtimeArr];
-        this.rendererB.render(this.arrayB);
-        this.statsB.endTime = this.statsB.endTime || Date.now();
+      if (category === "sort" || category === "search") {
+        if (isA) {
+          this.array = [...runtimeArr];
+          this.renderer.render(this.array);
+          this.stats.endTime = this.stats.endTime || Date.now();
+        } else {
+          this.arrayB = [...runtimeArr];
+          this.rendererB.render(this.arrayB);
+          this.statsB.endTime = this.statsB.endTime || Date.now();
+        }
+      } else if (category === "graph") {
+        this.graphRenderer.render();
+      } else if (category === "grid") {
+        this.gridRenderer.render();
       }
       this.updateStats();
     }
@@ -2387,6 +2419,15 @@ async def search(arr, target):
       interpolation: { best: 'O(1)', avg: 'O(log log n)', worst: 'O(n)',    fn: x => Math.log2(Math.log2(x) || 1) || 1 },
       exponential:   { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
       ternary:       { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+      // Graph & Grid Algorithms
+      bfs:           { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.5 },
+      dfs:           { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.5 },
+      dijkstra:      { best: 'O(E log V)', avg: 'O(E log V)', worst: 'O(E log V)', fn: x => x * Math.log2(x || 1) },
+      astar:         { best: 'O(1)', avg: 'O(E)',        worst: 'O(E log V)', fn: x => x * 1.8 },
+      bellman_ford:  { best: 'O(E)', avg: 'O(V·E)',     worst: 'O(V·E)',     fn: x => x * x },
+      prim:          { best: 'O(E log V)', avg: 'O(E log V)', worst: 'O(E log V)', fn: x => x * Math.log2(x || 1) },
+      kruskal:       { best: 'O(E log E)', avg: 'O(E log E)', worst: 'O(E log E)', fn: x => x * Math.log2(x || 1) },
+      toposort:      { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.0 },
     };
     return complexities[algo] || complexities.bubble;
   }
@@ -2523,26 +2564,30 @@ async def search(arr, target):
     ctx.setLineDash([]);
 
     // Actual operations curve — Side A
-    if (this.complexityDataA.length > 1) {
+    if (this.complexityDataA.length > 0) {
       ctx.strokeStyle = accent;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      for (let i = 0; i < this.complexityDataA.length; i++) {
-        const x = pad.left + (i / (totalSteps - 1 || 1)) * plotW;
-        const y = pad.top + plotH - (this.complexityDataA[i] / actualMax) * plotH;
+      for (let i = 0; i < totalSteps; i++) {
+        const dataIdx = Math.min(i, this.complexityDataA.length - 1);
+        const val = this.complexityDataA[dataIdx];
+        const x = pad.left + (totalSteps <= 1 ? 0 : (i / (totalSteps - 1)) * plotW);
+        const y = pad.top + plotH - (val / actualMax) * plotH;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.stroke();
     }
 
     // Actual operations curve — Side B (race mode)
-    if (isRace && this.complexityDataB && this.complexityDataB.length > 1) {
+    if (isRace && this.complexityDataB && this.complexityDataB.length > 0) {
       ctx.strokeStyle = colorB;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      for (let i = 0; i < this.complexityDataB.length; i++) {
-        const x = pad.left + (i / (totalSteps - 1 || 1)) * plotW;
-        const y = pad.top + plotH - (this.complexityDataB[i] / actualMax) * plotH;
+      for (let i = 0; i < totalSteps; i++) {
+        const dataIdx = Math.min(i, this.complexityDataB.length - 1);
+        const val = this.complexityDataB[dataIdx];
+        const x = pad.left + (totalSteps <= 1 ? 0 : (i / (totalSteps - 1)) * plotW);
+        const y = pad.top + plotH - (val / actualMax) * plotH;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.stroke();
@@ -2745,6 +2790,8 @@ async def search(arr, target):
       arrayB: [...this.arrayB],
       stats: { ...this.stats },
       statsB: { ...this.statsB },
+      complexityDataA: [...(this.complexityDataA || [])],
+      complexityDataB: [...(this.complexityDataB || [])],
       sortedIndices: new Set(this.renderer.sortedIndices || []),
       sortedIndicesB: this.rendererB ? new Set(this.rendererB.sortedIndices || []) : new Set(),
       graphNodes: this.currentCategory === "graph" ? JSON.parse(JSON.stringify(this.graphEngine.nodes)) : null,
@@ -2778,6 +2825,8 @@ async def search(arr, target):
     this.arrayB = [...prev.arrayB];
     this.stats = { ...prev.stats };
     this.statsB = { ...prev.statsB };
+    this.complexityDataA = [...(prev.complexityDataA || [])];
+    this.complexityDataB = [...(prev.complexityDataB || [])];
     if (this.renderer.sortedIndices) this.renderer.sortedIndices = new Set(prev.sortedIndices);
     if (this.rendererB && this.rendererB.sortedIndices) this.rendererB.sortedIndices = new Set(prev.sortedIndicesB);
 
@@ -2794,14 +2843,16 @@ async def search(arr, target):
     }
 
     this.updateStats();
-    this.updateComplexityData();
+    if (this.complexityCanvas && this.complexityOverlay?.classList.contains('visible')) {
+      this.renderComplexityChart();
+    }
 
     if (this.elements.pseudocodeBody) {
       this.pseudocodeManager.highlightLine(this.elements.pseudocodeBody, prev.pseudocodeLine);
     }
 
     this.updateStepBackBtn();
-    this.log("⬅️ Stepped back one operation (state saved for re-run)");
+    this.log("⬅️ Stepped back one operation");
   }
 
   updateStepBackBtn() {
