@@ -71,30 +71,58 @@ window.utils = {
   // Drag helper for floating elements
   makeDraggable: function(elmnt, dragHandle) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    let elStartX = 0, elStartY = 0;
     const handle = dragHandle || elmnt;
     handle.style.cursor = "move";
 
-    handle.onmousedown = dragMouseDown;
-    handle.ontouchstart = dragTouchStart;
+    function getEffectivePos() {
+      const s = window.getComputedStyle(elmnt).position;
+      if (s === 'fixed') return 'fixed';
+      if (elmnt.style.position === 'fixed') return 'fixed';
+      return s || 'absolute';
+    }
 
     function dragMouseDown(e) {
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
       e.preventDefault();
+      const mode = getEffectivePos();
       pos3 = e.clientX;
       pos4 = e.clientY;
+      const rect = elmnt.getBoundingClientRect();
+      elStartX = rect.left;
+      elStartY = rect.top;
+      if (mode !== 'fixed') {
+        elmnt.style.position = 'absolute';
+        elStartX = elmnt.offsetLeft;
+        elStartY = elmnt.offsetTop;
+      }
       document.onmouseup = closeDragElement;
       document.onmousemove = elementDrag;
     }
 
     function elementDrag(e) {
       e.preventDefault();
+      const mode = getEffectivePos();
       pos1 = pos3 - e.clientX;
       pos2 = pos4 - e.clientY;
       pos3 = e.clientX;
       pos4 = e.clientY;
-      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-      elmnt.style.position = "absolute";
+      let newTop, newLeft;
+      if (mode === 'fixed') {
+        newTop = (elStartY - pos2);
+        newLeft = (elStartX - pos1);
+        const maxX = window.innerWidth - elmnt.offsetWidth;
+        const maxY = window.innerHeight - elmnt.offsetHeight;
+        newLeft = Math.max(0, Math.min(newLeft, maxX));
+        newTop = Math.max(0, Math.min(newTop, maxY));
+        elmnt.style.left = newLeft + "px";
+        elmnt.style.top = newTop + "px";
+      } else {
+        newTop = (elmnt.offsetTop - pos2);
+        newLeft = (elmnt.offsetLeft - pos1);
+        elmnt.style.left = newLeft + "px";
+        elmnt.style.top = newTop + "px";
+      }
     }
 
     function closeDragElement() {
@@ -105,8 +133,17 @@ window.utils = {
     function dragTouchStart(e) {
       if (e.touches.length !== 1) return;
       const touch = e.touches[0];
+      const mode = getEffectivePos();
       pos3 = touch.clientX;
       pos4 = touch.clientY;
+      const rect = elmnt.getBoundingClientRect();
+      elStartX = rect.left;
+      elStartY = rect.top;
+      if (mode !== 'fixed') {
+        elmnt.style.position = 'absolute';
+        elStartX = elmnt.offsetLeft;
+        elStartY = elmnt.offsetTop;
+      }
       document.ontouchend = closeTouchDrag;
       document.ontouchmove = touchDrag;
     }
@@ -114,19 +151,36 @@ window.utils = {
     function touchDrag(e) {
       if (e.touches.length !== 1) return;
       const touch = e.touches[0];
+      const mode = getEffectivePos();
       pos1 = pos3 - touch.clientX;
       pos2 = pos4 - touch.clientY;
       pos3 = touch.clientX;
       pos4 = touch.clientY;
-      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-      elmnt.style.position = "absolute";
+      let newTop, newLeft;
+      if (mode === 'fixed') {
+        newTop = (elStartY - pos2);
+        newLeft = (elStartX - pos1);
+        const maxX = window.innerWidth - elmnt.offsetWidth;
+        const maxY = window.innerHeight - elmnt.offsetHeight;
+        newLeft = Math.max(0, Math.min(newLeft, maxX));
+        newTop = Math.max(0, Math.min(newTop, maxY));
+        elmnt.style.left = newLeft + "px";
+        elmnt.style.top = newTop + "px";
+      } else {
+        newTop = (elmnt.offsetTop - pos2);
+        newLeft = (elmnt.offsetLeft - pos1);
+        elmnt.style.left = newLeft + "px";
+        elmnt.style.top = newTop + "px";
+      }
     }
 
     function closeTouchDrag() {
       document.ontouchend = null;
       document.ontouchmove = null;
     }
+
+    handle.onmousedown = dragMouseDown;
+    handle.ontouchstart = dragTouchStart;
   },
 
   // Logger

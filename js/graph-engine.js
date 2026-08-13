@@ -65,9 +65,9 @@ class GraphEngine {
     const neighbors = [];
     this.edges.forEach(e => {
       if (e.source === nodeId) {
-        neighbors.push({ nodeId: e.target, weight: e.weight, edge: e });
+        neighbors.push({ id: e.target, nodeId: e.target, weight: e.weight, edge: e });
       } else if (!this.isDirected && e.target === nodeId) {
-        neighbors.push({ nodeId: e.source, weight: e.weight, edge: e });
+        neighbors.push({ id: e.source, nodeId: e.source, weight: e.weight, edge: e });
       }
     });
     return neighbors;

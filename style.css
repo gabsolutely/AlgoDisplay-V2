@@ -321,7 +321,8 @@ select.btn-minimal:hover {
 }
 
 #code-editor.expanded {
-  height: 550px;
+  height: 550px !important;
+  flex: none !important;
 }
 
 #code-editor:focus {
@@ -922,6 +923,7 @@ input[type="checkbox"] {
   display: flex;
   gap: 12px;
   width: 100%;
+  margin-top: -1px;
 }
 
 .viz-side {
@@ -936,7 +938,7 @@ input[type="checkbox"] {
   color: var(--accent);
   border: 1px solid var(--accent);
   border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: 0;
   padding: 6px 12px;
   font-weight: 700;
   font-size: 13px;
@@ -1031,21 +1033,22 @@ input[type="checkbox"] {
 
 /* ---- Complexity Overlay ---- */
 #complexity-overlay {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  min-width: 340px;
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: var(--radius);
   padding: 0;
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px) scale(0.96);
   transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 20;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  z-index: 9995;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03);
   overflow: hidden;
 }
 
@@ -1138,7 +1141,7 @@ input[type="checkbox"] {
 .pseudocode-container-wrapper {
   display: flex;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
   width: 100%;
   z-index: 10;
 }
@@ -1146,14 +1149,16 @@ input[type="checkbox"] {
 .pseudocode-panel {
   flex: 1;
   background: var(--card);
-  border: 1px solid var(--muted);
-  border-radius: var(--radius);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius) var(--radius) 0 0;
   display: flex;
   flex-direction: column;
-  height: 200px;
+  min-height: 200px;
+  max-height: 320px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   transition: border-color 0.2s ease;
+  border-bottom: none;
 }
 
 .pseudocode-panel:hover {
