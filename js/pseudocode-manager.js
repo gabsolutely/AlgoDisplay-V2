@@ -1,9 +1,18 @@
-// pseudocode-manager.js — Canonical Pseudocode & Highlighting Sync for AlgoDisplay V2
+/**
+ * pseudocode-manager.js — Canonical pseudocode reference + line highlighting sync.
+ *
+ * Holds the authoritative text for every algorithm across all four categories
+ * (sort / search / graph / grid). The visualizer calls `highlightLine()` on
+ * every viz step so the pseudocode pane scrolls to and emphasizes the line
+ * currently being executed. Index is 1-based (matches rendered line numbers).
+ */
 
 class PseudocodeManager {
   constructor() {
     this.pseudocodes = {
-      // --- SORTING ALGORITHMS ---
+      // ================================================================
+      //  SORTING  — 10 algorithms
+      // ================================================================
       sort: {
         bubble: [
           "for i = 0 to n - 1:",
@@ -90,7 +99,9 @@ class PseudocodeManager {
         ]
       },
 
-      // --- SEARCHING ALGORITHMS ---
+      // ================================================================
+      //  SEARCHING  — 5 algorithms
+      // ================================================================
       search: {
         linear: [
           "for i = 0 to n - 1:",
@@ -135,7 +146,9 @@ class PseudocodeManager {
         ]
       },
 
-      // --- GRAPH ALGORITHMS ---
+      // ================================================================
+      //  GRAPH TRAVERSAL / PATH / MST / TOPO  — 8 algorithms
+      // ================================================================
       graph: {
         bfs: [
           "queue = [startNode], visited = {startNode}",
@@ -219,7 +232,9 @@ class PseudocodeManager {
         ]
       },
 
-      // --- GRID / MAZE ALGORITHMS ---
+      // ================================================================
+      //  GRID / MAZE PATHFINDING  — 4 algorithms
+      // ================================================================
       grid: {
         bfs: [
           "queue = [startCell], visited = {startCell}",
@@ -268,27 +283,42 @@ class PseudocodeManager {
     };
   }
 
+  /**
+   * Fetch the pseudocode lines for a (category, algorithm) pair.
+   * Fallback cascade: category-miss → sort category → bubble sort → placeholder text.
+   *
+   * @param {"sort"|"search"|"graph"|"grid"} category
+   * @param {string} algorithm
+   * @returns {string[]}
+   */
   getPseudocode(category, algorithm) {
     const catObj = this.pseudocodes[category] || this.pseudocodes.sort;
     return catObj[algorithm] || catObj.bubble || ["// Pseudocode unavailable"];
   }
 
+  /**
+   * Render pseudocode into a container with numbered lines.
+   * Optionally update the title element above the pane.
+   *
+   * @param {HTMLElement} container           - Target container for lines.
+   * @param {string}      category            - Algorithm category.
+   * @param {string}      algorithm           - Algorithm key.
+   * @param {string}      [algoTitle=""]      - Friendly title shown above the lines.
+   * @param {HTMLElement} [titleElOverride]   - Optional custom title element (else #pseudocode-algo-title).
+   */
   renderPseudocode(container, category, algorithm, algoTitle = "", titleElOverride = null) {
     if (!container) return;
     const lines = this.getPseudocode(category, algorithm);
-    
-    // Title label
+
     const titleEl = titleElOverride || document.getElementById("pseudocode-algo-title");
-    if (titleEl && algoTitle) {
-      titleEl.textContent = algoTitle;
-    }
+    if (titleEl && algoTitle) titleEl.textContent = algoTitle;
 
     container.innerHTML = "";
     lines.forEach((lineText, idx) => {
       const lineDiv = document.createElement("div");
-      lineDiv.className = "pseudocode-line";
-      lineDiv.dataset.line = idx + 1;
-      
+      lineDiv.className       = "pseudocode-line";
+      lineDiv.dataset.line    = idx + 1;       // 1-based index (human-friendly)
+
       const numSpan = document.createElement("span");
       numSpan.className = "pseudocode-line-num";
       numSpan.textContent = idx + 1;
@@ -303,17 +333,21 @@ class PseudocodeManager {
     });
   }
 
+  /**
+   * Highlight line `lineNumber` (1-based) and scroll the CONTAINER to center it.
+   * Deliberately does NOT use `scrollIntoView` because that would jump the
+   * entire page; we only want the pseudocode pane itself to scroll.
+   */
   highlightLine(container, lineNumber) {
     if (!container) return;
     const lines = container.querySelectorAll(".pseudocode-line");
     lines.forEach((line) => {
       if (parseInt(line.dataset.line) === lineNumber) {
         line.classList.add("active");
-        // Scroll inside container only, DO NOT use scrollIntoView to prevent page jump
-        const lineTop = line.offsetTop;
-        const lineH = line.clientHeight;
+        const lineTop   = line.offsetTop;
+        const lineH     = line.clientHeight;
         const containerH = container.clientHeight;
-        container.scrollTop = lineTop - containerH / 2 + lineH / 2;
+        container.scrollTop = lineTop - containerH / 2 + lineH / 2;   // centered
       } else {
         line.classList.remove("active");
       }

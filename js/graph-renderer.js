@@ -1,36 +1,51 @@
-// graph-renderer.js — SVG Node-Edge General Graph Renderer
+/**
+ * graph-renderer.js — SVG renderer for general node+edge graphs.
+ *
+ * Uses SVG 1.1 namespace (important for <marker> defs) with a 600×320 viewBox.
+ * Layer order: edges <g> drawn first, nodes <g> drawn on top (so edge arrows
+ * go behind node circles, not through them).
+ *
+ * The renderer is stateless except for drag state: it reads 100% of what to
+ * draw from the injected GraphEngine reference on every `render()` call.
+ */
 
 class GraphRenderer {
   constructor() {
-    this.container = null;
-    this.svg = null;
-    this.engine = null;
-    this.draggedNode = null;
-    this.dragOffset = { x: 0, y: 0 };
-    this.onNodeClick = null;
-    this.onEdgeClick = null;
+    this.container   = null;             // DOM parent
+    this.svg         = null;             // <svg> root (600x320 viewBox)
+    this.engine      = null;             // GraphEngine reference (data source)
+    this.edgesGroup  = null;             // <g id="edges-layer">
+    this.nodesGroup  = null;             // <g id="nodes-layer">
+    this.draggedNode = null;             // node object currently being dragged
+    this.dragOffset  = { x: 0, y: 0 };   // mouse→node offset at drag start (viewBox coords)
+    this.onNodeClick = null;             // optional callback
+    this.onEdgeClick = null;             // optional callback
   }
 
+  /**
+   * Create SVG root, defs (arrowhead marker), and layer groups. Hook up drag.
+   * @param {HTMLElement} container
+   * @param {GraphEngine} engine
+   */
   init(container, engine) {
     this.container = container;
-    this.engine = engine;
+    this.engine    = engine;
     this.container.innerHTML = "";
-    
-    // Create SVG element
+
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svg.setAttribute("width", "100%");
     this.svg.setAttribute("height", "100%");
     this.svg.setAttribute("viewBox", "0 0 600 320");
-    this.svg.style.background = "var(--card)";
+    this.svg.style.background   = "var(--card)";
     this.svg.style.borderRadius = "var(--radius)";
-    this.svg.style.userSelect = "none";
+    this.svg.style.userSelect   = "none";
 
-    // SVG Marker Defs (Arrowheads for directed edges)
-    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    // --- Arrowhead marker: used by directed edges via marker-end="url(#arrowhead)" ---
+    const defs   = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
     marker.setAttribute("id", "arrowhead");
     marker.setAttribute("viewBox", "0 0 10 10");
-    marker.setAttribute("refX", "22"); // Offset to sit outside circle radius
+    marker.setAttribute("refX", "22");                 // offset so tip sits just outside node circle
     marker.setAttribute("refY", "5");
     marker.setAttribute("markerWidth", "6");
     marker.setAttribute("markerHeight", "6");
@@ -44,7 +59,6 @@ class GraphRenderer {
     defs.appendChild(marker);
     this.svg.appendChild(defs);
 
-    // Layers: Edges group below, Nodes group above
     this.edgesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     this.edgesGroup.setAttribute("id", "edges-layer");
     this.nodesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -58,15 +72,21 @@ class GraphRenderer {
     this.render();
   }
 
+  /**
+   * Wire up node drag-to-reposition.
+   * Mouse→viewBox conversion: scale client coords by viewBox/canvas ratio because
+   * the SVG is responsive (width=100%) but node coords are in viewBox units.
+   */
   setupInteractions() {
     this.svg.addEventListener("mousemove", (e) => {
       if (!this.draggedNode) return;
-      const rect = this.svg.getBoundingClientRect();
+      const rect   = this.svg.getBoundingClientRect();
       const scaleX = 600 / rect.width;
       const scaleY = 320 / rect.height;
       const mouseX = (e.clientX - rect.left) * scaleX;
-      const mouseY = (e.clientY - rect.top) * scaleY;
+      const mouseY = (e.clientY - rect.top)  * scaleY;
 
+      // Clamp to a 30px inner margin so nodes stay visible inside the canvas.
       this.draggedNode.x = Math.max(30, Math.min(570, mouseX - this.dragOffset.x));
       this.draggedNode.y = Math.max(30, Math.min(290, mouseY - this.dragOffset.y));
       this.render();
@@ -77,46 +97,42 @@ class GraphRenderer {
     });
   }
 
+  /**
+   * Full redraw: rebuild edges + nodes from GraphEngine state.
+   * Called after every graph-algo step and after any drag move.
+   */
   render() {
     if (!this.engine || !this.svg) return;
 
-    // Clear layers
     this.edgesGroup.innerHTML = "";
     this.nodesGroup.innerHTML = "";
 
-    // Render Edges
+    // ---- EDGES ----
     this.engine.edges.forEach(edge => {
       const sourceNode = this.engine.nodes.find(n => n.id === edge.source);
       const targetNode = this.engine.nodes.find(n => n.id === edge.target);
       if (!sourceNode || !targetNode) return;
 
       const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      const line  = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", sourceNode.x);
       line.setAttribute("y1", sourceNode.y);
       line.setAttribute("x2", targetNode.x);
       line.setAttribute("y2", targetNode.y);
 
-      // Color coding for edges
+      // Edge color based on status. exploring=red mid-step, path/mst=green final.
       let strokeColor = "var(--muted)";
       let strokeWidth = "2";
-      if (edge.status === "exploring") {
-        strokeColor = "var(--danger)"; // Red glow
-        strokeWidth = "4";
-      } else if (edge.status === "path" || edge.status === "mst") {
-        strokeColor = "var(--ok)"; // Green glow
-        strokeWidth = "4";
-      }
+      if      (edge.status === "exploring")             { strokeColor = "var(--danger)"; strokeWidth = "4"; }
+      else if (edge.status === "path" || edge.status === "mst") { strokeColor = "var(--ok)"; strokeWidth = "4"; }
 
       line.setAttribute("stroke", strokeColor);
       line.setAttribute("stroke-width", strokeWidth);
-      if (edge.directed) {
-        line.setAttribute("marker-end", "url(#arrowhead)");
-      }
+      if (edge.directed) line.setAttribute("marker-end", "url(#arrowhead)");
 
       group.appendChild(line);
 
-      // Edge Weight Text
+      // Edge weight label: drawn on top of a tiny <rect> background for contrast.
       if (edge.weight !== undefined) {
         const midX = (sourceNode.x + targetNode.x) / 2;
         const midY = (sourceNode.y + targetNode.y) / 2;
@@ -146,34 +162,21 @@ class GraphRenderer {
       this.edgesGroup.appendChild(group);
     });
 
-    // Render Nodes
+    // ---- NODES ----
     this.engine.nodes.forEach(node => {
       const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
       group.style.cursor = "pointer";
 
-      // Color coding for nodes
-      let fillColor = "var(--card)";
-      let strokeColor = "var(--accent)"; // Default blue
+      // Status → fill/stroke color map.
+      let fillColor   = "var(--card)";
+      let strokeColor = "var(--accent)";
       let strokeWidth = "2";
 
-      if (node.status === "start") {
-        strokeColor = "var(--ok)";
-        fillColor = "rgba(16, 185, 129, 0.2)";
-      } else if (node.status === "target") {
-        strokeColor = "var(--danger)";
-        fillColor = "rgba(251, 113, 133, 0.2)";
-      } else if (node.status === "visiting") {
-        strokeColor = "var(--warn)";
-        fillColor = "rgba(245, 158, 11, 0.3)";
-        strokeWidth = "3";
-      } else if (node.status === "visited") {
-        strokeColor = "#a855f7"; // Purple
-        fillColor = "rgba(168, 85, 247, 0.2)";
-      } else if (node.status === "path") {
-        strokeColor = "var(--ok)";
-        fillColor = "rgba(16, 185, 129, 0.4)";
-        strokeWidth = "3";
-      }
+      if      (node.status === "start")    { strokeColor = "var(--ok)";          fillColor = "rgba(16, 185, 129, 0.2)"; }
+      else if (node.status === "target")   { strokeColor = "var(--danger)";      fillColor = "rgba(251, 113, 133, 0.2)"; }
+      else if (node.status === "visiting") { strokeColor = "var(--warn)";        fillColor = "rgba(245, 158, 11, 0.3)"; strokeWidth = "3"; }
+      else if (node.status === "visited")  { strokeColor = "#a855f7";            fillColor = "rgba(168, 85, 247, 0.2)"; }
+      else if (node.status === "path")     { strokeColor = "var(--ok)";          fillColor = "rgba(16, 185, 129, 0.4)"; strokeWidth = "3"; }
 
       const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", node.x);
@@ -193,7 +196,7 @@ class GraphRenderer {
       label.setAttribute("dominant-baseline", "central");
       label.textContent = node.label;
 
-      // Distance Badge if modified
+      // Distance badge (top-right of node) — shown only once Dijkstra/Bellman writes a finite distance.
       if (node.distance !== undefined && node.distance !== Infinity) {
         const badgeBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         badgeBg.setAttribute("x", node.x + 8);
@@ -220,14 +223,14 @@ class GraphRenderer {
       group.appendChild(circle);
       group.appendChild(label);
 
-      // Drag listener
+      // Drag hook: record offset so dragging feels natural even if you grab near an edge.
       group.addEventListener("mousedown", (e) => {
         this.draggedNode = node;
-        const rect = this.svg.getBoundingClientRect();
+        const rect   = this.svg.getBoundingClientRect();
         const scaleX = 600 / rect.width;
         const scaleY = 320 / rect.height;
         const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
+        const mouseY = (e.clientY - rect.top)  * scaleY;
         this.dragOffset = { x: mouseX - node.x, y: mouseY - node.y };
       });
 

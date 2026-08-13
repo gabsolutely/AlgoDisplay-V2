@@ -1,6 +1,22 @@
-// utils.js
+/**
+ * utils.js — Bag of reusable stateless helpers.
+ *
+ * All utilities are exposed on the single `window.utils` namespace so they're
+ * callable from any script without module bundlers. Utilities are intentionally
+ * framework-agnostic vanilla JS.
+ */
+
 window.utils = {
-  // Debounce function
+
+  /**
+   * Classic trailing-edge debounce: delays invoking `func` until `wait` ms
+   * have elapsed since the last call. Used for resize / slider / input handlers
+   * that shouldn't fire on every single event.
+   *
+   * @param {Function} func  - Function to debounce.
+   * @param {number}   wait  - Quiet-window delay in milliseconds.
+   * @returns {Function} Debounced wrapper.
+   */
   debounce: function(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -12,33 +28,52 @@ window.utils = {
       timeout = setTimeout(later, wait);
     };
   },
-  
-  // Generate random array
+
+  /**
+   * Generate a uniformly random integer array of the given size.
+   * Values are in the half-open range [min, max).
+   *
+   * @param {number} size - Desired array length.
+   * @param {number} [min=20]  - Inclusive lower bound.
+   * @param {number} [max=220] - Exclusive upper bound.
+   * @returns {number[]}
+   */
   generateRandomArray: function(size, min = 20, max = 220) {
-    return Array.from({ length: size }, () => 
+    return Array.from({ length: size }, () =>
       Math.floor(Math.random() * (max - min)) + min
     );
   },
-  
-  // Get array statistics
+
+  /**
+   * Compute descriptive stats for a numeric array.
+   *
+   * @param {number[]} arr
+   * @returns {({size:number, min:number, max:number, sum:number, avg:string, range:number} | null)}
+   */
   getArrayStats: function(arr) {
     if (!arr || arr.length === 0) return null;
-    
+
     const sum = arr.reduce((a, b) => a + b, 0);
     const min = Math.min(...arr);
     const max = Math.max(...arr);
-    
+
     return {
       size: arr.length,
       min: min,
       max: max,
       sum: sum,
-      avg: (sum / arr.length).toFixed(1),
+      avg: (sum / arr.length).toFixed(1),  // formatted to 1 decimal for display
       range: max - min
     };
   },
-  
-  // Safe execution
+
+  /**
+   * Wrap a function call in try/catch and return `null` on exception.
+   * Good for non-critical paths where a throw would only surface noise.
+   *
+   * @param {Function} fn
+   * @returns {*} fn() or null if thrown.
+   */
   safeExecute: function(fn) {
     try {
       return fn();
@@ -47,34 +82,52 @@ window.utils = {
       return null;
     }
   },
-  
-  // Browser support check
+
+  /**
+   * Feature-detect modern browser APIs that AlgoDisplay uses.
+   * Called once on startup to warn users on older browsers.
+   *
+   * @returns {{ supported: boolean, unsupported: string[], features: object }}
+   */
   checkBrowserSupport: function() {
     const features = {
-      webAudio: !!(window.AudioContext || window.webkitAudioContext),
-      promises: typeof Promise !== 'undefined',
+      webAudio:  !!(window.AudioContext || window.webkitAudioContext),
+      promises:  typeof Promise !== 'undefined',
       asyncAwait: (async () => {})() instanceof Promise,
-      pyodide: typeof loadPyodide !== 'undefined'
+      pyodide:   typeof loadPyodide !== 'undefined'
     };
-    
+
+    // Convert missing keys like "webAudio" → human-readable "web audio".
     const unsupported = Object.keys(features)
       .filter(key => !features[key])
       .map(key => key.replace(/([A-Z])/g, ' $1').toLowerCase());
-    
+
     return {
       supported: unsupported.length === 0,
       unsupported: unsupported,
       features: features
     };
   },
-  
-  // Drag helper for floating elements
+
+  /**
+   * Attach drag-to-move behaviour to a floating UI element (e.g. the
+   * complexity chart overlay). Works with both mouse and touch. The drag
+   * handle can be a sub-element (e.g. just the title bar); if omitted, the
+   * whole element becomes the handle.
+   *
+   * Supports both `position: absolute` (relative to offset parent) and
+   * `position: fixed` (relative to viewport), detected per-drag start.
+   *
+   * @param {HTMLElement} elmnt       - Element to move.
+   * @param {HTMLElement} [dragHandle] - Sub-element to grab (defaults to elmnt).
+   */
   makeDraggable: function(elmnt, dragHandle) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     let elStartX = 0, elStartY = 0;
     const handle = dragHandle || elmnt;
     handle.style.cursor = "move";
 
+    /** Detect effective CSS position (important for coordinate systems). */
     function getEffectivePos() {
       const s = window.getComputedStyle(elmnt).position;
       if (s === 'fixed') return 'fixed';
@@ -82,7 +135,9 @@ window.utils = {
       return s || 'absolute';
     }
 
+    /** Mouse press: capture start position and hook move/up listeners. */
     function dragMouseDown(e) {
+      // Don't hijack clicks on actual controls (buttons/inputs/selects).
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
       e.preventDefault();
       const mode = getEffectivePos();
@@ -100,6 +155,7 @@ window.utils = {
       document.onmousemove = elementDrag;
     }
 
+    /** Mouse move: compute delta and apply translation, clamped to viewport. */
     function elementDrag(e) {
       e.preventDefault();
       const mode = getEffectivePos();
@@ -111,6 +167,7 @@ window.utils = {
       if (mode === 'fixed') {
         newTop = (elStartY - pos2);
         newLeft = (elStartX - pos1);
+        // Clamp so the element can't be dragged off-screen.
         const maxX = window.innerWidth - elmnt.offsetWidth;
         const maxY = window.innerHeight - elmnt.offsetHeight;
         newLeft = Math.max(0, Math.min(newLeft, maxX));
@@ -125,11 +182,13 @@ window.utils = {
       }
     }
 
+    /** Mouse up: release drag hooks. */
     function closeDragElement() {
       document.onmouseup = null;
       document.onmousemove = null;
     }
 
+    // --- Touch analogues of the mouse path above ---
     function dragTouchStart(e) {
       if (e.touches.length !== 1) return;
       const touch = e.touches[0];
@@ -183,20 +242,15 @@ window.utils = {
     handle.ontouchstart = dragTouchStart;
   },
 
-  // Logger
+  /**
+   * Small styled console logger — wraps messages with emoji + CSS color.
+   * Intended for human-facing dev feedback, not structured logging.
+   */
   logger: {
-    info: function(msg) {
-      console.log(`%cℹ️ ${msg}`, 'color: #17a2b8; font-weight: bold;');
-    },
-    success: function(msg) {
-      console.log(`%c✅ ${msg}`, 'color: #28a745; font-weight: bold;');
-    },
-    error: function(msg) {
-      console.log(`%c❌ ${msg}`, 'color: #dc3545; font-weight: bold;');
-    },
-    warn: function(msg) {
-      console.log(`%c⚠️ ${msg}`, 'color: #ffc107; font-weight: bold;');
-    }
+    info:    function(msg) { console.log(`%cℹ️ ${msg}`, 'color: #17a2b8; font-weight: bold;'); },
+    success: function(msg) { console.log(`%c✅ ${msg}`, 'color: #28a745; font-weight: bold;'); },
+    error:   function(msg) { console.log(`%c❌ ${msg}`, 'color: #dc3545; font-weight: bold;'); },
+    warn:    function(msg) { console.log(`%c⚠️ ${msg}`, 'color: #ffc107; font-weight: bold;'); }
   }
 };
 
