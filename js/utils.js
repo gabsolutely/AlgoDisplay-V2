@@ -146,7 +146,12 @@ window.utils = {
       const rect = elmnt.getBoundingClientRect();
       elStartX = rect.left;
       elStartY = rect.top;
-      if (mode !== 'fixed') {
+      if (mode === 'fixed') {
+        elmnt.style.right = 'auto';
+        elmnt.style.bottom = 'auto';
+        elmnt.style.left = elStartX + 'px';
+        elmnt.style.top = elStartY + 'px';
+      } else {
         elmnt.style.position = 'absolute';
         elStartX = elmnt.offsetLeft;
         elStartY = elmnt.offsetTop;
@@ -200,7 +205,14 @@ window.utils = {
       const rect = elmnt.getBoundingClientRect();
       elStartX = rect.left;
       elStartY = rect.top;
-      if (mode !== 'fixed') {
+      if (mode === 'fixed') {
+        // Neutralize right/bottom so left/top actually take effect instead of
+        // fighting the CSS auto-width constraint.
+        elmnt.style.right = 'auto';
+        elmnt.style.bottom = 'auto';
+        elmnt.style.left = elStartX + 'px';
+        elmnt.style.top = elStartY + 'px';
+      } else {
         elmnt.style.position = 'absolute';
         elStartX = elmnt.offsetLeft;
         elStartY = elmnt.offsetTop;
