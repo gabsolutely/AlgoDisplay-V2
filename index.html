@@ -1,5 +1,23 @@
+<!-- =============================================================
+     AlgoDisplayV2 — index.html
+     Single-page app: write algorithms in JS/Python, visualize in real-time.
+     Section structure:
+       <head>      → meta, stylesheet, Pyodide CDN preload
+       <header>    → title + GitHub/YouTube/TikTok social links
+       <main>
+         editor-section         → 3 toolbar cards + code editor + pseudocode panels A/B + help
+         controls-section       → gen/run/pause/resume/step/stepBack/stepForward/clear buttons + speed slider
+         visualization-section  → op-info bar + pseudocode wrapper + viz-wrapper (side A/B dual)
+         info-section           → stats-grid: info-card A, info-card B, log panel (full width)
+       <footer>    → bug report link
+       Scripts load order CRITICAL:
+         utils → sound-manager → pseudocode-manager → graph-engine
+               → array-renderer → graph-renderer → grid-renderer
+               → python-runner → core.js (AlgorithmVisualizer class) → init.js (bootstrap)
+     ============================================================= -->
 <!DOCTYPE html>
 <html lang="en">
+<!-- ── <head>: Meta, CSS, Pyodide CDN (Python via WASM) ─────────── -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +27,7 @@
 </head>
 <body>
     <div class="container">
+        <!-- ── Header: Title + social links (GitHub / YouTube / TikTok) ─ -->
         <header class="header">
             <div class="header-content">
                 <div class="title-section">
@@ -35,10 +54,12 @@
             </div>
         </header>
 
+        <!-- ── Main: editor + controls + visualization + info sections ── -->
         <main class="main">
+            <!-- ── Editor Section: 3 toolbar cards + code editor + pseudocode panels + help -->
             <section class="editor-section">
                 <div class="editor-controls">
-                    <!-- Panel 1: Code & Data -->
+                    <!-- Toolbar Card 1: Code & Data (category, language, algo, preset, size, graph/grid) -->
                     <div class="toolbar-card">
                         <div class="card-title">⚙️ Code & Data</div>
                         <div class="card-controls">
@@ -133,7 +154,7 @@
                         </div>
                     </div>
 
-                    <!-- Panel 2: Sound Studio -->
+                    <!-- Toolbar Card 2: Sound Studio (SFX on/off, musical mode, kits, waveform, scale, octave, volume, jam) -->
                     <div class="toolbar-card">
                         <div class="card-title">🎵 Sound Studio</div>
                         <div class="card-controls">
@@ -205,7 +226,7 @@
                         </div>
                     </div>
 
-                    <!-- Panel 3: Race & View Options -->
+                    <!-- Toolbar Card 3: Race & View Options (race mode, vs algorithm B, theme, colorblind, share, complexity, help) -->
                     <div class="toolbar-card">
                         <div class="card-title">🏎️ Mode & View</div>
                         <div class="card-controls">
@@ -251,6 +272,8 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Editor Card 4: Code Editor (hidden by default) -->
                 <div class="editor-container">
                     <div class="editor-header-bar">
                         <span>💻 Code Editor</span>
@@ -308,6 +331,7 @@ for (let i = 0; i < arr.length - 1; i++) {
                 </div>
             </section>
 
+            <!-- ── Controls Section: Gen/Run/Pause/Resume/Step/Clear Buttons & Speed Slider ── -->
             <section class="controls-section">
                 <div class="control-buttons">
                     <button id="gen-btn" class="btn btn-primary">Generate Array</button>
@@ -331,6 +355,7 @@ for (let i = 0; i < arr.length - 1; i++) {
                 <div id="action-controls" class="action-controls"></div>
             </section>
 
+            <!-- ── Visualization Section: Status Header, Pseudocode Panels A/B, and Visualizer Canvas A/B ── -->
             <section class="visualization-section">
                 <div class="visualization-header">
                     <h2>Visualization</h2>
@@ -364,6 +389,7 @@ for (let i = 0; i < arr.length - 1; i++) {
                 </div>
             </section>
 
+            <!-- ── Info Section: Stats Grid (Card A/B) & Execution Log Panel ── -->
             <section class="info-section">
                 <div class="info-grid" id="stats-grid">
                     <div class="info-card" id="stats-card-a">
@@ -393,12 +419,14 @@ for (let i = 0; i < arr.length - 1; i++) {
                 </div>
             </section>
         </main>
+        
+        <!-- ── Footer: Bug Report Link ── -->
         <footer class="footer">
             <p>Found any bugs? Report them at my <a href="https://github.com/gabsolutely/AlgoDisplay/issues">GitHub!</a></p>
         </footer>
     </div>
 
-    <!-- JavaScript Files -->
+    <!-- ── JavaScript Scripts Load (Order Critical) ── -->
     <script src="js/utils.js"></script>
     <script src="js/sound-manager.js"></script>
     <script src="js/pseudocode-manager.js"></script>

@@ -1,27 +1,37 @@
-// core.js (main class)
+/**
+ * core.js — Main AlgorithmVisualizer controller class.
+ *
+ * Orchestrates EVERYTHING: algorithm execution (JS + Python via Pyodide),
+ * rendering (array bars, SVG graphs, Canvas grids), step-back snapshot replay,
+ * complexity chart overlay, pseudocode line highlighting, sound synthesis,
+ * shareable URL state, and all DOM event wiring.
+ *
+ * Side-system classes (GraphEngine, *Renderer, SoundManager, PseudocodeManager,
+ * PythonRunner) are instantiated here and exposed as properties for debugging.
+ */
 class AlgorithmVisualizer {
   constructor() {
-    // Core state
-    this.array = [];
-    this.arrayB = [];
-    this.raceMode = false;
-    this.isRunning = false;
-    this.isPaused = false;
-    this.stepMode = false;
-    this.shouldStop = false;
-    this.speed = 300;
-    this.soundEnabled = true;
-    this.musicalMode = false;
-    this.currentLanguage = 'javascript';
-    this.currentCategory = 'sort';
-    this.currentAlgorithm = 'bubble';
-    this.currentAlgorithmB = 'bubble';
-    this.searchTarget = null;
-    this.stepResolve = null;
-    this._generation = 0;
-    this._runGeneration = null;
-    
-    // Performance stats
+    // ── Execution & Lifecycle State ─────────────────────────────────
+    this.array = [];                // Primary dataset (sort/search arrays)
+    this.arrayB = [];               // Race-mode side-B dataset (clone of array at start)
+    this.raceMode = false;          // Dual-algorithm head-to-head comparison
+    this.isRunning = false;         // True while user code is executing
+    this.isPaused = false;          // User-initiated pause (sleep() blocks)
+    this.stepMode = false;          // Manual click-to-advance stepping
+    this.shouldStop = false;        // Cooperative abort flag (checked in every sleep + API call)
+    this.speed = 300;               // Base animation delay in ms (slider-driven)
+    this.soundEnabled = true;       // SFX master gate
+    this.musicalMode = false;       // When on: compare/swap play scale dyads instead of blips
+    this.currentLanguage = 'javascript';   // 'javascript' | 'python'
+    this.currentCategory = 'sort';          // 'sort' | 'search' | 'graph' | 'grid'
+    this.currentAlgorithm = 'bubble';       // User-picked algorithm (side A)
+    this.currentAlgorithmB = 'bubble';      // Race-mode opponent (side B)
+    this.searchTarget = null;               // Numeric target for search algorithms
+    this.stepResolve = null;                // Promise resolver — set by sleep() in step mode, fired by step-forward click
+    this._generation = 0;                   // Increments on every generate/clear — lets running code detect stale arrays
+    this._runGeneration = null;             // Snapshot of _generation at run start — guards against mid-run regeneration
+
+    // ── Performance Stats ───────────────────────────────────────────────
     this.stats = {
       comparisons: 0,
       swaps: 0,
@@ -36,13 +46,15 @@ class AlgorithmVisualizer {
       startTime: 0,
       endTime: 0
     };
-    
-    // Step-back history & Pseudocode tracking
-    this.history = [];
-    this.future = [];
+
+    // ── Step-Back History & Pseudocode Tracking ─────────────────────────
+    this.history = [];  // Undo stack (snapshots)
+    this.future = [];   // Redo stack
     this.currentPseudocodeLine = 0;
-    
-    // DOM elements cache
+
+    // ── DOM Element Cache ────────────────────────────────────────────
+    // Queried ONCE at startup — avoids repeated getElementById calls.
+    // Missing elements are flagged by validateElements() below for debugging.
     this.elements = {
       container: document.getElementById("visualizer"),
       containerB: document.getElementById("visualizer-b"),
@@ -124,40 +136,45 @@ class AlgorithmVisualizer {
       mazeGenBtn: document.getElementById("maze-gen-btn"),
       clearWallsBtn: document.getElementById("clear-walls-btn"),
     };
-    
-    console.log("Elements found:", this.validateElements());
-    
-    // Initialize subsystems
-    this.pseudocodeManager = new PseudocodeManager();
-    this.graphEngine = new GraphEngine();
-    this.graphRenderer = new GraphRenderer();
-    this.gridRenderer = new GridRenderer();
 
+    console.log("Elements found:", this.validateElements());
+
+    // ── Instantiate Subsystem Singletons ────────────────────────────
+    this.pseudocodeManager = new PseudocodeManager();   // Holds + renders canonical pseudocode text per algo
+    this.graphEngine     = new GraphEngine();           // Pure data layer: nodes/edges + grid/maze cells
+    this.graphRenderer   = new GraphRenderer();         // SVG renderer for GraphEngine nodes/edges
+    this.gridRenderer    = new GridRenderer();          // Canvas2D renderer for GraphEngine grid cells
+
+    // Array bar renderers: primary (A) + secondary race-mode (B)
     this.renderer = new ArrayRenderer();
     this.renderer.init(this.elements.container);
     this.rendererB = new ArrayRenderer();
-    if (this.elements.containerB) {
-      this.rendererB.init(this.elements.containerB);
-    }
+    if (this.elements.containerB) this.rendererB.init(this.elements.containerB);
+
+    // Sound synthesis (Web Audio API, no audio files)
     this.sounds = new SoundManager();
     this.sounds.setScale("pentatonic");
     this.sounds.setWaveform("triangle");
-    this.pythonRunner = new PythonRunner();
+
+    // Two Pyodide runners so A and B algos execute in isolated sandboxes during race
+    this.pythonRunner  = new PythonRunner();
     this.pythonRunnerB = new PythonRunner();
-    
+
     this.init();
   }
-  
+
+  // ── Initialization Boot Sequence ──────────────────────────────────────
   async init() {
     console.log("AlgoDisplay initializing...");
-    this.setupEventListeners();
-    const loadedFromURL = this.loadFromURL();
+    this.setupEventListeners();                     // Wire every button/slider/toggle/shortcut
+    const loadedFromURL = this.loadFromURL();       // Restore state from ?state= share URL (if any)
     if (!loadedFromURL) {
-      this.setExampleCode();
-      this.generateArray();
+      this.setExampleCode();                        // Populate code editor with built-in algo template
+      this.generateArray();                         // Create first dataset (or graph/grid layout)
     }
-    this.initComplexityOverlay();
+    this.initComplexityOverlay();                   // Create complexity chart DOM (hidden until user clicks 📊)
 
+    // Make pseudocode panels draggable by their title bars
     if (window.utils && window.utils.makeDraggable) {
       if (this.elements.pseudocodePanel) {
         window.utils.makeDraggable(this.elements.pseudocodePanel, this.elements.pseudocodePanel.querySelector('.pseudocode-header'));
@@ -168,7 +185,11 @@ class AlgorithmVisualizer {
     }
     console.log("AlgoDisplay ready");
   }
-  
+
+  /**
+   * Verify every cached DOM element was found. Called once after caching.
+   * Logs any missing IDs so developers can fix HTML/JS ID mismatches quickly.
+   */
   validateElements() {
     const found = {};
     Object.entries(this.elements).forEach(([key, element]) => {
@@ -177,16 +198,21 @@ class AlgorithmVisualizer {
     });
     return found;
   }
-  
-  setupEventListeners() {
-    this.elements.generateBtn.onclick = () => this.generateArray();
 
+  /**
+   * Wire ALL UI event handlers. Keep this list synchronized with index.html.
+   * Grouped by concern for readability (main controls, sound, race, edit shortcuts, etc.).
+   */
+  setupEventListeners() {
+    // ── Primary action buttons ──────────────────────────────────────
+    this.elements.generateBtn.onclick = () => this.generateArray();
     this.elements.runBtn.onclick = () => this.runVisualization();
     this.elements.pauseBtn.onclick = () => this.pauseExecution();
     this.elements.resumeBtn.onclick = () => this.resumeExecution();
     this.elements.stepBtn.onclick = () => this.toggleStepMode();
     this.elements.clearBtn.onclick = () => this.clearAll();
 
+    // Help panel toggle
     if (this.elements.helpBtn && this.elements.helpPanel) {
       this.elements.helpBtn.onclick = () => {
         const isVisible = this.elements.helpPanel.style.display !== "none";
@@ -197,21 +223,23 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Speed slider (animation delay)
     const updateSpeed = () => {
       this.speed = parseInt(this.elements.speedSlider.value);
       if (isNaN(this.speed)) this.speed = 300;
       this.elements.speedValue.textContent = this.speed + "ms";
     };
-
     this.elements.speedSlider.addEventListener('input', updateSpeed);
     this.elements.speedSlider.addEventListener('change', updateSpeed);
     updateSpeed();
 
+    // ── Category (sort/search/graph/grid) + per-category sub-controls ──
     this.elements.categorySelect.onchange = () => {
       this.currentCategory = this.elements.categorySelect.value;
-      this.onCategoryChange();
+      this.onCategoryChange();       // Swaps renderers, refills algorithm dropdowns, regenerates data
     };
 
+    // Graph tab: preset rebuild (random/tree/DAG/negative) + directed toggle
     if (this.elements.graphPresetSelect) {
       this.elements.graphPresetSelect.onchange = () => {
         const p = this.elements.graphPresetSelect.value;
@@ -219,14 +247,13 @@ class AlgorithmVisualizer {
         this.graphRenderer.render();
       };
     }
-
     if (this.elements.directedToggle) {
       this.elements.directedToggle.onchange = () => {
         this.graphEngine.setDirected(this.elements.directedToggle.checked);
         this.graphRenderer.render();
       };
     }
-
+    // Grid tab: recursive-backtracking maze generator + wall eraser
     if (this.elements.mazeGenBtn) {
       this.elements.mazeGenBtn.onclick = () => {
         this.graphEngine.generateRecursiveMaze();
@@ -234,7 +261,6 @@ class AlgorithmVisualizer {
         this.log("⚡ Generated Recursive Backtracking Maze!");
       };
     }
-
     if (this.elements.clearWallsBtn) {
       this.elements.clearWallsBtn.onclick = () => {
         this.graphEngine.clearGridWalls();
@@ -243,16 +269,18 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Language + algorithm dropdowns — both refill the editor textarea
     this.elements.languageSelect.onchange = () => {
       this.currentLanguage = this.elements.languageSelect.value;
       this.setExampleCode();
     };
-
     this.elements.algorithmSelect.onchange = () => {
       this.currentAlgorithm = this.elements.algorithmSelect.value;
       this.setExampleCode();
     };
 
+    // ── Sound Studio controls ───────────────────────────────────────
+    // Master gate + musical dyads
     this.elements.soundToggle.onchange = () => {
       this.soundEnabled = this.elements.soundToggle.checked;
       this.sounds.setEnabled(this.soundEnabled);
@@ -266,6 +294,7 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Producer kit presets (pre-configured sound profiles)
     if (this.elements.producerKitSelect) {
       this.elements.producerKitSelect.onchange = () => {
         const kitName = this.elements.producerKitSelect.value;
@@ -280,6 +309,7 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Individual sound controls (waveform, scale, octave)
     if (this.elements.waveformSelect) {
       this.elements.waveformSelect.onchange = () => {
         this.sounds.setWaveform(this.elements.waveformSelect.value);
@@ -287,7 +317,6 @@ class AlgorithmVisualizer {
         this.log("Synth Sound: " + this.elements.waveformSelect.value);
       };
     }
-
     if (this.elements.scaleSelect) {
       this.elements.scaleSelect.onchange = () => {
         this.sounds.setScale(this.elements.scaleSelect.value);
@@ -295,7 +324,6 @@ class AlgorithmVisualizer {
         this.log("Scale: " + this.elements.scaleSelect.value);
       };
     }
-
     if (this.elements.octaveSelect) {
       this.elements.octaveSelect.onchange = () => {
         this.sounds.setOctave(this.elements.octaveSelect.value);
@@ -304,6 +332,7 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Volume control
     if (this.elements.volumeRange) {
       const updateVolume = () => {
         const volVal = parseInt(this.elements.volumeRange.value) || 0;
@@ -314,16 +343,18 @@ class AlgorithmVisualizer {
       this.elements.volumeRange.addEventListener('change', updateVolume);
       updateVolume();
     }
-
+    // Jam button (audition current sound)
     if (this.elements.producerJamBtn) {
       this.elements.producerJamBtn.onclick = () => {
         this.sounds.playProducerDemo();
       };
     }
 
+    // Race mode toggle (dual-algorithm comparison)
     if (this.elements.raceToggle) {
       this.elements.raceToggle.onchange = () => {
         this.raceMode = this.elements.raceToggle.checked;
+        // Show/hide side B visualization and stats
         if (this.elements.vizSideB) {
           this.elements.vizSideB.style.display = this.raceMode ? "" : "none";
         }
@@ -345,21 +376,25 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Algorithm B selector (for race mode)
     if (this.elements.algorithmSelectB) {
       this.elements.algorithmSelectB.onchange = () => {
         this.currentAlgorithmB = this.elements.algorithmSelectB.value;
       };
     }
 
+    // Preset selector (show/hide conditional controls)
     if (this.elements.presetSelect) {
       this.elements.presetSelect.onchange = () => {
         const preset = this.elements.presetSelect.value;
+        // Show nearly-sorted sliders only when that preset is selected
         if (this.elements.nearlySortedGroups) {
           const showNearly = preset === "nearly-sorted";
           this.elements.nearlySortedGroups.forEach(el => {
             el.style.display = showNearly ? "" : "none";
           });
         }
+        // Show custom array textarea only when custom preset is selected
         if (this.elements.customOnlyGroups) {
           const showCustom = preset === "custom";
           this.elements.customOnlyGroups.forEach(el => {
@@ -369,6 +404,7 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Nearly-sorted preset sliders
     if (this.elements.nearlySwapsSlider) {
       const updateSwapsLabel = () => {
         if (this.elements.nearlySwapsVal) {
@@ -379,7 +415,6 @@ class AlgorithmVisualizer {
       this.elements.nearlySwapsSlider.addEventListener('change', updateSwapsLabel);
       updateSwapsLabel();
     }
-
     if (this.elements.nearlySpreadSlider) {
       const updateSpreadLabel = () => {
         if (this.elements.nearlySpreadVal) {
@@ -391,6 +426,7 @@ class AlgorithmVisualizer {
       updateSpreadLabel();
     }
 
+    // Theme toggle (light/dark mode)
     if (this.elements.themeToggle) {
       this.elements.themeToggle.onchange = (e) => {
         if (e.target.checked) {
@@ -400,7 +436,7 @@ class AlgorithmVisualizer {
         }
       };
     }
-
+    // Colorblind palette toggle
     if (this.elements.paletteToggle) {
       this.elements.paletteToggle.onchange = (e) => {
         if (e.target.checked) {
@@ -411,6 +447,7 @@ class AlgorithmVisualizer {
       };
     }
 
+    // Search target input
     if (this.elements.targetInput) {
       this.elements.targetInput.addEventListener('input', () => {
         const v = parseInt(this.elements.targetInput.value);
@@ -418,6 +455,7 @@ class AlgorithmVisualizer {
       });
     }
 
+    // Keyboard shortcuts (Ctrl/Cmd + Enter/R/L)
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
@@ -437,10 +475,11 @@ class AlgorithmVisualizer {
       }
     });
 
+    // Share button (copy URL with state)
     if (this.elements.shareBtn) {
       this.elements.shareBtn.onclick = () => this.shareState();
     }
-
+    // Complexity overlay toggle
     if (this.elements.complexityBtn) {
       this.elements.complexityBtn.onclick = () => {
         if (!this.complexityOverlay) this.initComplexityOverlay();
@@ -449,15 +488,14 @@ class AlgorithmVisualizer {
         if (willShow) this.renderComplexityChart();
       };
     }
-
+    // Step navigation buttons
     if (this.elements.stepBackBtn) {
       this.elements.stepBackBtn.onclick = () => this.stepBack();
     }
-
     if (this.elements.stepForwardBtn) {
       this.elements.stepForwardBtn.onclick = () => this.stepForward();
     }
-
+    // Editor expand/collapse
     if (this.elements.editorExpandBtn) {
       this.elements.editorExpandBtn.onclick = () => {
         const isExpanded = this.elements.editor.classList.toggle('expanded');
@@ -466,11 +504,13 @@ class AlgorithmVisualizer {
     }
   }
 
+  // ── Category & Algorithm Management ───────────────────────────────────
   onCategoryChange() {
     const isSearch = this.currentCategory === "search";
     const isGraph = this.currentCategory === "graph";
     const isGrid = this.currentCategory === "grid";
 
+    // Show/hide category-specific controls
     if (this.elements.searchOnlyGroups) {
       this.elements.searchOnlyGroups.forEach(el => el.style.display = isSearch ? "" : "none");
     }
@@ -481,6 +521,7 @@ class AlgorithmVisualizer {
       this.elements.gridOnlyGroups.forEach(el => el.style.display = isGrid ? "" : "none");
     }
 
+    // Update generate button text based on category
     if (this.elements.generateBtn) {
       if (isGraph) {
         this.elements.generateBtn.textContent = "⚡ Generate Graph / Tree";
@@ -491,6 +532,7 @@ class AlgorithmVisualizer {
       }
     }
 
+    // Initialize appropriate renderer for category
     if (isGraph) {
       this.graphEngine.generatePreset(this.elements.graphPresetSelect?.value || "random");
       this.graphRenderer.init(this.elements.container, this.graphEngine);
@@ -508,6 +550,7 @@ class AlgorithmVisualizer {
     this.setExampleCode();
   }
 
+  // Refresh algorithm dropdown based on current category
   refreshAlgorithmOptions() {
     const select = this.elements.algorithmSelect;
     const opts = {
@@ -562,6 +605,7 @@ class AlgorithmVisualizer {
     select.value = this.currentAlgorithm;
   }
 
+  // Refresh algorithm B dropdown (for race mode)
   refreshAlgorithmSelectB() {
     if (!this.elements.algorithmSelectB) return;
     const opts = {
@@ -611,7 +655,9 @@ class AlgorithmVisualizer {
     this.currentAlgorithmB = keep ? prev : list[0][0];
     this.elements.algorithmSelectB.value = this.currentAlgorithmB;
   }
-  
+
+  // ── Code Templates ─────────────────────────────────────────────────────
+  // Populate editor with example code for selected algorithm/language
   setExampleCode() {
     const language = this.currentLanguage;
     const category = this.currentCategory;
@@ -1502,7 +1548,9 @@ async def search(arr, target):
     }
     this.elements.editor.value = t || fallback;
   }
-  
+
+  // ── Array Generation ───────────────────────────────────────────────────
+  // Generate array with specific preset pattern (random, nearly-sorted, etc.)
   generatePreset(size, preset, options = {}) {
     const base = () => Math.floor(Math.random() * 180) + 30;
     switch (preset) {
@@ -1535,6 +1583,7 @@ async def search(arr, target):
     }
   }
 
+  // Parse user-input custom array string (comma/space separated)
   parseCustomArray(text) {
     if (!text || !text.trim()) return null;
     const parts = text.split(/[\s,;]+/).filter(s => s.length > 0);
@@ -1543,6 +1592,7 @@ async def search(arr, target):
     return nums.map(n => Math.max(1, Math.min(500, Math.round(n))));
   }
 
+  // Generate new data (array/graph/grid) and reset visualization state
   generateArray() {
     let size = 20;
     if (this.elements.arraySizeInput) {
@@ -1676,7 +1726,9 @@ async def search(arr, target):
     this.log(`Generated array of size ${this.array.length} (preset: ${preset})${extra}`);
     this.sounds.play('generate');
   }
-  
+
+  // ── Utility Functions ───────────────────────────────────────────────────
+  // Update statistics display (comparisons, swaps, time, etc.)
   updateStats() {
     this.elements.statSize.textContent = this.array.length;
     this.elements.statComparisons.textContent = this.stats.comparisons;
@@ -1699,7 +1751,8 @@ async def search(arr, target):
       }
     }
   }
-  
+
+  // Append message to execution log (auto-scrolls, truncates if too long)
   log(msg) {
     // Clear log if it's getting too long
     if (this.elements.logArea.textContent.length > 5000) {
@@ -1710,11 +1763,13 @@ async def search(arr, target):
     this.elements.logArea.scrollTop = this.elements.logArea.scrollHeight;
     console.log("Log:", msg);
   }
-  
+
+  // Update the operation info display (shows current algorithm operation)
   updateOperationInfo(operation) {
     this.elements.operationInfo.textContent = operation;
   }
-  
+
+  // Reset all state: stop execution, clear displays, reset stats/history
   clearAll() {
     // Stop execution
     this.shouldStop = true;
@@ -1777,13 +1832,16 @@ async def search(arr, target):
     
     console.log("All cleared");
   }
-  
+
+  // ── Execution Control ───────────────────────────────────────────────────
+  // Toggle manual step-through mode
   toggleStepMode() {
     this.stepMode = !this.stepMode;
     this.elements.stepBtn.textContent = this.stepMode ? "Stop Step Mode" : "Step Mode";
     this.log("Step mode: " + (this.stepMode ? "ON" : "OFF"));
   }
-  
+
+  // Pause the currently running algorithm
   pauseExecution() {
     console.log("PAUSE EXECUTION CALLED - isRunning:", this.isRunning, "isPaused:", this.isPaused);
     this.isPaused = true;
@@ -1791,14 +1849,16 @@ async def search(arr, target):
     this.elements.resumeBtn.style.display = "inline-block";
     this.log("Execution paused");
   }
-  
+
+  // Resume a paused algorithm
   resumeExecution() {
     this.isPaused = false;
     this.elements.resumeBtn.style.display = "none";
     this.elements.pauseBtn.style.display = "inline-block";
     this.log("Execution resumed");
   }
-  
+
+  // Validate user code before execution (checks for async/await, function signatures)
   validateCode(code, language) {
     if (!code || !code.trim()) {
       return "Code cannot be empty";
@@ -1850,7 +1910,9 @@ async def search(arr, target):
 
     return null;
   }
-  
+
+  // ── Main Execution ───────────────────────────────────────────────────────
+  // Run the algorithm visualization (handles step-back replay, validation, dispatch)
   async runVisualization() {
     console.log("=== RUN VISUALIZATION START ===");
 
@@ -2068,6 +2130,7 @@ async def search(arr, target):
     }
   }
 
+  // Run dual-algorithm race mode (both algorithms execute concurrently)
   async runRace(codeA, sharedOpts) {
     const language = this.currentLanguage;
     const category = this.currentCategory;
@@ -2154,6 +2217,13 @@ async def search(arr, target):
     }
   }
 
+  /**
+   * Minified built-in algorithm code for Race Mode side-B.
+   * Side A always runs the user's editor code; side B uses these pre-minified
+   * canonical implementations so "Race" is always user-code vs built-in reference.
+   * Covers sort(10) + search(5) + graph(8) + grid(4) for JS; sort+search only for Python.
+   * Falls back: category → sort → bubble.
+   */
   getBuiltinCode(algo, category, language) {
     const t = {
       javascript: {
@@ -2222,7 +2292,9 @@ async def search(arr, target):
     const byCat = byLang[category] || byLang.sort;
     return byCat[algo] || byCat.bubble || byCat.linear || '';
   }
-  
+
+  // ── Visualization API ───────────────────────────────────────────────────
+  // Create API object injected into user code (provides compare, swap, etc.)
   createVisualizationAPI(side = 'a') {
     const isA = side === 'a';
     const renderer = isA ? this.renderer : this.rendererB;
@@ -2432,9 +2504,11 @@ async def search(arr, target):
       markSorted: (i) => {
         renderer.markSorted(i);
       }
-    };
+    }
   }
 
+  // ── Execute User JavaScript Code ──────────────────────────────────────
+  // Execute user JavaScript code via Function constructor (injects API functions)
   async runJavaScript(code, api, options = {}) {
     console.log("Running JavaScript code directly...");
     const category = options.category || "sort";
@@ -2537,7 +2611,9 @@ async def search(arr, target):
       this.updateStats();
     }
   }
-  
+
+  // ── Async Sleep Function ──────────────────────────────────────────────
+  // Async sleep with pause/step-mode support (respects speed setting)
   async sleep(ms) {
     const sleepGeneration = this._runGeneration;
     return new Promise(resolve => {
@@ -2569,112 +2645,9 @@ async def search(arr, target):
       }
     });
   }
-  
-  showNextStepButton() {
-    this.elements.actionControls.innerHTML = '';
-    const nextBtn = document.createElement("button");
-    nextBtn.className = "step-next-btn";
-    nextBtn.textContent = "Next Step →";
-    nextBtn.onclick = () => {
-      this.elements.actionControls.innerHTML = '';
-      if (this.stepResolve) {
-        this.stepResolve();
-        this.stepResolve = null;
-      }
-    };
-    this.elements.actionControls.appendChild(nextBtn);
-  }
 
-  // ─── Shareable Run State ───────────────────────────────────
-  encodeState() {
-    const params = new URLSearchParams();
-    params.set('cat', this.currentCategory);
-    params.set('algo', this.currentAlgorithm);
-    params.set('lang', this.currentLanguage);
-    params.set('speed', this.speed);
-    if (this.elements.arraySizeInput) params.set('size', this.elements.arraySizeInput.value);
-    if (this.elements.presetSelect) params.set('preset', this.elements.presetSelect.value);
-    if (this.raceMode) {
-      params.set('race', '1');
-      params.set('algoB', this.currentAlgorithmB);
-    }
-    if (this.currentCategory === 'search' && this.searchTarget != null) {
-      params.set('target', this.searchTarget);
-    }
-    if (this.elements.themeToggle && this.elements.themeToggle.checked) params.set('theme', 'light');
-    if (this.elements.paletteToggle && this.elements.paletteToggle.checked) params.set('cb', '1');
-    return window.location.origin + window.location.pathname + '?' + params.toString();
-  }
-
-  loadFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.size === 0) return false;
-
-    // Category
-    if (params.has('cat')) {
-      this.currentCategory = params.get('cat');
-      if (this.elements.categorySelect) this.elements.categorySelect.value = this.currentCategory;
-      this.refreshAlgorithmOptions();
-    }
-    // Algorithm
-    if (params.has('algo')) {
-      this.currentAlgorithm = params.get('algo');
-      if (this.elements.algorithmSelect) this.elements.algorithmSelect.value = this.currentAlgorithm;
-    }
-    // Language
-    if (params.has('lang')) {
-      this.currentLanguage = params.get('lang');
-      if (this.elements.languageSelect) this.elements.languageSelect.value = this.currentLanguage;
-    }
-    // Speed
-    if (params.has('speed')) {
-      this.speed = parseInt(params.get('speed')) || 300;
-      if (this.elements.speedSlider) this.elements.speedSlider.value = this.speed;
-      if (this.elements.speedValue) this.elements.speedValue.textContent = this.speed + 'ms';
-    }
-    // Array size
-    if (params.has('size') && this.elements.arraySizeInput) {
-      this.elements.arraySizeInput.value = params.get('size');
-    }
-    // Preset
-    if (params.has('preset') && this.elements.presetSelect) {
-      this.elements.presetSelect.value = params.get('preset');
-      this.elements.presetSelect.dispatchEvent(new Event('change'));
-    }
-    // Race mode
-    if (params.get('race') === '1') {
-      this.raceMode = true;
-      if (this.elements.raceToggle) {
-        this.elements.raceToggle.checked = true;
-        this.elements.raceToggle.dispatchEvent(new Event('change'));
-      }
-      if (params.has('algoB') && this.elements.algorithmSelectB) {
-        this.currentAlgorithmB = params.get('algoB');
-        this.elements.algorithmSelectB.value = this.currentAlgorithmB;
-      }
-    }
-    // Search target
-    if (params.has('target')) {
-      this.searchTarget = parseInt(params.get('target'));
-      if (this.elements.targetInput) this.elements.targetInput.value = this.searchTarget;
-    }
-    // Theme
-    if (params.get('theme') === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-      if (this.elements.themeToggle) this.elements.themeToggle.checked = true;
-    }
-    // Colorblind
-    if (params.get('cb') === '1') {
-      document.documentElement.setAttribute('data-palette', 'colorblind');
-      if (this.elements.paletteToggle) this.elements.paletteToggle.checked = true;
-    }
-
-    this.setExampleCode();
-    this.generateArray();
-    this.log('📎 State loaded from shared URL');
-    return true;
-  }
-
+  // ── Shareable State ────────────────────────────────────────────────────
+  // Copy shareable URL to clipboard
   shareState() {
     const url = this.encodeState();
     navigator.clipboard.writeText(url).then(() => {
@@ -2693,54 +2666,8 @@ async def search(arr, target):
     });
   }
 
-  showToast(message) {
-    const existing = document.querySelector('.toast-notification');
-    if (existing) existing.remove();
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, 2500);
-  }
-
-  // ─── Complexity Overlay ────────────────────────────────────
-  getTheoreticalComplexity(algo) {
-    const n = this.array.length;
-    const complexities = {
-      // Sorting
-      bubble:    { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
-      selection: { best: 'O(n²)',     avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
-      insertion: { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
-      merge:     { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', fn: x => x * Math.log2(x) },
-      quick:     { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n²)',     fn: x => x * Math.log2(x) },
-      heap:      { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', fn: x => x * Math.log2(x) },
-      shell:     { best: 'O(n log n)', avg: 'O(n^1.3)',  worst: 'O(n²)',     fn: x => x * Math.pow(Math.log2(x), 2) },
-      cocktail:  { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
-      counting:  { best: 'O(n+k)',    avg: 'O(n+k)',    worst: 'O(n+k)',    fn: x => x * 2 },
-      radix:     { best: 'O(nk)',     avg: 'O(nk)',     worst: 'O(nk)',     fn: x => x * 3 },
-      // Searching
-      linear:        { best: 'O(1)', avg: 'O(n)',       worst: 'O(n)',       fn: x => x },
-      binary:        { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
-      interpolation: { best: 'O(1)', avg: 'O(log log n)', worst: 'O(n)',    fn: x => Math.log2(Math.log2(x) || 1) || 1 },
-      exponential:   { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
-      ternary:       { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
-      // Graph & Grid Algorithms
-      bfs:           { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.5 },
-      dfs:           { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.5 },
-      dijkstra:      { best: 'O(E log V)', avg: 'O(E log V)', worst: 'O(E log V)', fn: x => x * Math.log2(x || 1) },
-      astar:         { best: 'O(1)', avg: 'O(E)',        worst: 'O(E log V)', fn: x => x * 1.8 },
-      bellman_ford:  { best: 'O(E)', avg: 'O(V·E)',     worst: 'O(V·E)',     fn: x => x * x },
-      prim:          { best: 'O(E log V)', avg: 'O(E log V)', worst: 'O(E log V)', fn: x => x * Math.log2(x || 1) },
-      kruskal:       { best: 'O(E log E)', avg: 'O(E log E)', worst: 'O(E log E)', fn: x => x * Math.log2(x || 1) },
-      toposort:      { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.0 },
-    };
-    return complexities[algo] || complexities.bubble;
-  }
-
+  // ── Complexity Overlay ────────────────────────────────────────────────
+  // Initialize complexity chart overlay (hidden by default)
   initComplexityOverlay() {
     const existing = document.getElementById('complexity-overlay');
     if (existing) existing.remove();
@@ -2771,17 +2698,20 @@ async def search(arr, target):
     this.complexityOverlay = overlay;
   }
 
+  // Reset complexity tracking data arrays
   resetComplexityData() {
     this.complexityDataA = [];
     this.complexityDataB = [];
   }
 
+  // Show complexity overlay and render chart
   showComplexityOverlay() {
     if (!this.complexityOverlay) this.initComplexityOverlay();
     this.complexityOverlay.classList.add('visible');
     this.renderComplexityChart();
   }
 
+  // Hide complexity overlay
   hideComplexityOverlay() {
     if (this.complexityOverlay) this.complexityOverlay.classList.remove('visible');
   }
@@ -2798,6 +2728,7 @@ async def search(arr, target):
     }
   }
 
+  // Render the complexity chart (theoretical vs actual operations)
   renderComplexityChart() {
     const ctx = this.complexityCtx;
     if (!ctx) return;
@@ -2998,7 +2929,8 @@ async def search(arr, target):
     }
   }
 
-  // ─── Pseudocode & History (Step Back) ────────────────────────
+  // ── Pseudocode Panel Rendering & Line Highlighting ─────────────────
+  // Map algo ID → array of lines (for legacy getPseudocode) — prefer PseudocodeManager
   getPseudocode(algo) {
     const codeMap = {
       bubble: [
@@ -3143,14 +3075,19 @@ async def search(arr, target):
     }
   }
 
+  // ── Snapshot System (Undo / Redo Step Back / Forward) ─────────────────
+  // History stack (undo), Future stack (redo). Max 500 entries each.
+  // Snapshots capture: arrays, stats, complexity data, sorted sets, graph/grid state, pseudocode line.
+
+  /** Push a new live snapshot (algorithm advancing). Clears redo stack. */
   saveSnapshot(tag = 'step') {
     if (this.history.length > 500) this.history.shift();
-    // When a new live snapshot is created (algorithm advancing), clear the redo stack
     this.future = [];
     this.history.push(this._captureSnapshot(tag));
     this.updateStepNavButtons();
   }
 
+  /** Serialize ALL visual state into a plain object for later restore. */
   _captureSnapshot(tag = 'step') {
     return {
       category: this.currentCategory,
@@ -3170,6 +3107,7 @@ async def search(arr, target):
     };
   }
 
+  /** Restore all visual state from a previously captured snapshot. */
   _applySnapshot(snap) {
     if (!snap) return;
     this.array = [...snap.array];
@@ -3203,13 +3141,13 @@ async def search(arr, target):
     }
   }
 
+  /** Pop one snapshot from history (undo). Aborts live run if active. */
   stepBack() {
     if (this.history.length <= 1) {
       this.showToast("ℹ️ At starting state — cannot step back further.");
       return;
     }
 
-    // Pause live execution if running - abort current generator, but don't reset UI state
     if (this.isRunning) {
       this.shouldStop = true;
       this.isPaused = true;
@@ -3220,7 +3158,6 @@ async def search(arr, target):
     this.isRunning = false;
     this.elements.runBtn.style.display = "inline-block";
 
-    // Pop current state, push it onto the redo (future) stack
     const current = this.history.pop();
     if (current) {
       if (this.future.length > 500) this.future.shift();
@@ -3233,12 +3170,12 @@ async def search(arr, target):
     this.log("⬅️ Stepped back one operation");
   }
 
+  /** Pop one snapshot from future (redo). Aborts live run if active. */
   stepForward() {
     if (this.future.length === 0) {
       this.showToast("ℹ️ No redo steps available.");
       return;
     }
-    // Pause live execution if running
     if (this.isRunning) {
       this.shouldStop = true;
       this.isPaused = true;
@@ -3248,7 +3185,6 @@ async def search(arr, target):
     this.isRunning = false;
     this.elements.runBtn.style.display = "inline-block";
 
-    // Capture current state (for quick undo) then pop future
     const current = this._captureSnapshot('pre-redo');
     const next = this.future.pop();
     this.history.push(current);
@@ -3258,6 +3194,7 @@ async def search(arr, target):
     this.log("➡️ Stepped forward one operation");
   }
 
+  /** Toggle visibility of Step Back / Forward buttons based on stack depths. */
   updateStepNavButtons() {
     if (this.elements.stepBackBtn) {
       const canBack = this.history.length > 1;
