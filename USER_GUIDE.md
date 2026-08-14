@@ -56,6 +56,9 @@ for (let i = 0; i < arr.length - 1; i++) {
 
 ### Python Algorithms
 
+> [!NOTE]
+> **Language Support Note**: Python algorithms via Pyodide currently support **Sorting** and **Searching** categories. **Graph** and **Grid Pathfinding** categories execute natively in **JavaScript** for maximum rendering performance and real-time interaction.
+
 #### Function Structure
 Your Python code must define an `async def sort(arr):` function:
 

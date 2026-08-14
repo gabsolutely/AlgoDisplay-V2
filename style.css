@@ -628,6 +628,28 @@ input[type="checkbox"] {
 }
 
 /* ── Log Area (execution trace messages, auto-scrolling) ────────── */
+.log-headers-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.log-headers-container h3 {
+  flex: 1;
+  margin: 0;
+}
+
+.log-bodies-container {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.log-bodies-container .logs {
+  flex: 1;
+  min-width: 0;
+}
+
 .log-area {
   background: var(--card);
   border-radius: var(--radius);

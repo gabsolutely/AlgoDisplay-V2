@@ -25,8 +25,8 @@ A web-based algorithm visualization tool with:
 
 ## System Overview // ############################################
  ### Supported Languages:
- - JavaScript — Native execution with async/await
- - Python — Pyodide WebAssembly runtime
+ - JavaScript — Native execution for all categories (Sorting, Searching, Graph, Grid)
+ - Python — Pyodide WebAssembly runtime (Sorting & Searching)
  ### Built-in Algorithms:
  - Bubble Sort — Classic comparison-based sorting
  - Selection Sort — In-place comparison algorithm  

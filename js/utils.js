@@ -174,6 +174,8 @@ window.utils = {
         newTop = Math.max(0, Math.min(newTop, maxY));
         elmnt.style.left = newLeft + "px";
         elmnt.style.top = newTop + "px";
+        elStartX = newLeft;
+        elStartY = newTop;
       } else {
         newTop = (elmnt.offsetTop - pos2);
         newLeft = (elmnt.offsetLeft - pos1);
@@ -225,6 +227,8 @@ window.utils = {
         newTop = Math.max(0, Math.min(newTop, maxY));
         elmnt.style.left = newLeft + "px";
         elmnt.style.top = newTop + "px";
+        elStartX = newLeft;
+        elStartY = newTop;
       } else {
         newTop = (elmnt.offsetTop - pos2);
         newLeft = (elmnt.offsetLeft - pos1);

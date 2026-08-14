@@ -412,9 +412,15 @@ for (let i = 0; i < arr.length - 1; i++) {
                             <div><strong>Time:</strong> <span id="stat-time-b">0ms</span></div>
                         </div>
                     </div>
-                    <div class="info-card info-card-log" style="grid-column: 1 / -1;">
-                        <h3>Execution Log</h3>
-                        <div id="logs" class="info-content logs"></div>
+                    <div class="info-card info-card-log" id="log-card" style="grid-column: 1 / -1;">
+                        <div class="log-headers-container">
+                            <h3 id="log-title-a">Execution Log</h3>
+                            <h3 id="log-title-b" style="display:none; color: #a78bfa;">Execution Log B</h3>
+                        </div>
+                        <div class="log-bodies-container" id="log-bodies-container">
+                            <div id="logs" class="info-content logs"></div>
+                            <div id="logs-b" class="info-content logs" style="display:none;"></div>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -174,15 +174,6 @@ class AlgorithmVisualizer {
     }
     this.initComplexityOverlay();                   // Create complexity chart DOM (hidden until user clicks 📊)
 
-    // Make pseudocode panels draggable by their title bars
-    if (window.utils && window.utils.makeDraggable) {
-      if (this.elements.pseudocodePanel) {
-        window.utils.makeDraggable(this.elements.pseudocodePanel, this.elements.pseudocodePanel.querySelector('.pseudocode-header'));
-      }
-      if (this.elements.pseudocodePanelB) {
-        window.utils.makeDraggable(this.elements.pseudocodePanelB, this.elements.pseudocodePanelB.querySelector('.pseudocode-header'));
-      }
-    }
     console.log("AlgoDisplay ready");
   }
 
@@ -510,6 +501,19 @@ class AlgorithmVisualizer {
     const isGraph = this.currentCategory === "graph";
     const isGrid = this.currentCategory === "grid";
 
+    // Disable Python for Graph & Grid modes
+    if (this.elements.languageSelect) {
+      Array.from(this.elements.languageSelect.options).forEach(opt => {
+        if (opt.value === "python") {
+          opt.disabled = isGraph || isGrid;
+        }
+      });
+      if ((isGraph || isGrid) && this.currentLanguage === "python") {
+        this.elements.languageSelect.value = "javascript";
+        this.currentLanguage = "javascript";
+      }
+    }
+
     // Show/hide category-specific controls
     if (this.elements.searchOnlyGroups) {
       this.elements.searchOnlyGroups.forEach(el => el.style.display = isSearch ? "" : "none");
@@ -532,18 +536,12 @@ class AlgorithmVisualizer {
       }
     }
 
-    // Initialize appropriate renderer for category
-    if (isGraph) {
-      this.graphEngine.generatePreset(this.elements.graphPresetSelect?.value || "random");
-      this.graphRenderer.init(this.elements.container, this.graphEngine);
-    } else if (isGrid) {
-      this.graphEngine.initGrid();
-      this.gridRenderer.init(this.elements.container, this.graphEngine);
-    } else {
+    // Initialize appropriate renderer for category and generate
+    if (this.currentCategory === "sort" || this.currentCategory === "search") {
       this.renderer = new ArrayRenderer();
       this.renderer.init(this.elements.container);
-      this.generateArray();
     }
+    this.generateArray();
 
     this.refreshAlgorithmOptions();
     this.refreshAlgorithmSelectB();
@@ -1121,12 +1119,18 @@ const target = getTargetCell();
 if (!start || !target) return;
 const queue = [start];
 const visited = new Set([\`\${start.row},\${start.col}\`]);
+const parent = {};
 
 while (queue.length > 0) {
   const current = queue.shift();
   await visitGridCell(current.row, current.col, "visiting");
   if (current.row === target.row && current.col === target.col) {
     log("Target reached!");
+    let curr = target;
+    while (curr) {
+      await visitGridCell(curr.row, curr.col, "path");
+      curr = parent[\`\${curr.row},\${curr.col}\`];
+    }
     return;
   }
   const neighbors = getGridNeighbors(current.row, current.col);
@@ -1134,6 +1138,7 @@ while (queue.length > 0) {
     const key = \`\${n.row},\${n.col}\`;
     if (!visited.has(key)) {
       visited.add(key);
+      parent[key] = current;
       queue.push(n);
     }
   }
@@ -1149,10 +1154,17 @@ async function dfsGrid(r, c) {
   if (visited.has(key)) return false;
   visited.add(key);
   await visitGridCell(r, c, "visiting");
-  if (r === target.row && c === target.col) return true;
+  if (r === target.row && c === target.col) {
+    log("Target reached!");
+    await visitGridCell(r, c, "path");
+    return true;
+  }
   const neighbors = getGridNeighbors(r, c);
   for (const n of neighbors) {
-    if (await dfsGrid(n.row, n.col)) return true;
+    if (await dfsGrid(n.row, n.col)) {
+      await visitGridCell(r, c, "path");
+      return true;
+    }
   }
   return false;
 }
@@ -1161,8 +1173,8 @@ await dfsGrid(start.row, start.col);`,
 const start = getStartCell();
 const target = getTargetCell();
 if (!start || !target) return;
-const rows = 15, cols = 25;
 const dist = {};
+const parent = {};
 const pq = [{ r: start.row, c: start.col, d: 0 }];
 dist[\`\${start.row},\${start.col}\`] = 0;
 
@@ -1174,6 +1186,11 @@ while (pq.length > 0) {
   await visitGridCell(curr.r, curr.c, "visiting");
   if (curr.r === target.row && curr.c === target.col) {
     log("Target reached!");
+    let p = target;
+    while (p) {
+      await visitGridCell(p.row ?? p.r, p.col ?? p.c, "path");
+      p = parent[\`\${p.row ?? p.r},\${p.col ?? p.c}\`];
+    }
     return;
   }
   const neighbors = getGridNeighbors(curr.r, curr.c);
@@ -1182,6 +1199,7 @@ while (pq.length > 0) {
     const nd = curr.d + 1;
     if (nd < (dist[nKey] ?? Infinity)) {
       dist[nKey] = nd;
+      parent[nKey] = { row: curr.r, col: curr.c };
       pq.push({ r: n.row, c: n.col, d: nd });
     }
   }
@@ -1200,7 +1218,7 @@ gScore[sKey] = 0;
 fScore[sKey] = h(start.row, start.col);
 
 while (openSet.size > 0) {
-  let curr = null, currKey = null, currF = Infinity;
+  let currKey = null, currF = Infinity;
   for (const k of openSet) {
     const f = fScore[k] ?? Infinity;
     if (f < currF) { currF = f; currKey = k; }
@@ -1211,6 +1229,17 @@ while (openSet.size > 0) {
   await visitGridCell(r, c, "visiting");
   if (r === target.row && c === target.col) {
     log("Target reached!");
+    let temp = { r, c };
+    while (temp) {
+      await visitGridCell(temp.r, temp.c, "path");
+      const parentKey = cameFrom[\`\${temp.r},\${temp.c}\`];
+      if (parentKey) {
+        const [pr, pc] = parentKey.split(",");
+        temp = { r: parseInt(pr), c: parseInt(pc) };
+      } else {
+        temp = null;
+      }
+    }
     return;
   }
   openSet.delete(currKey);
@@ -2648,6 +2677,121 @@ async def search(arr, target):
 
   // ── Shareable State ────────────────────────────────────────────────────
   // Copy shareable URL to clipboard
+  showToast(message) {
+    const existing = document.querySelector('.toast-notification');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  getTheoreticalComplexity(algo) {
+    const n = this.currentCategory === "graph"
+      ? (this.graphEngine.nodes.length || 8)
+      : this.currentCategory === "grid"
+        ? (this.graphEngine.gridRows * this.graphEngine.gridCols || 375)
+        : (this.array.length || 20);
+    const complexities = {
+      // Sorting
+      bubble:    { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      selection: { best: 'O(n²)',     avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      insertion: { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      merge:     { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', fn: x => x * Math.log2(x) },
+      quick:     { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n²)',     fn: x => x * Math.log2(x) },
+      heap:      { best: 'O(n log n)', avg: 'O(n log n)', worst: 'O(n log n)', fn: x => x * Math.log2(x) },
+      shell:     { best: 'O(n log n)', avg: 'O(n^1.3)',  worst: 'O(n²)',     fn: x => x * Math.pow(Math.log2(x), 2) },
+      cocktail:  { best: 'O(n)',      avg: 'O(n²)',     worst: 'O(n²)',     fn: x => x * x },
+      counting:  { best: 'O(n+k)',    avg: 'O(n+k)',    worst: 'O(n+k)',    fn: x => x * 2 },
+      radix:     { best: 'O(nk)',     avg: 'O(nk)',     worst: 'O(nk)',     fn: x => x * 3 },
+      // Searching
+      linear:        { best: 'O(1)', avg: 'O(n)',       worst: 'O(n)',       fn: x => x },
+      binary:        { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+      interpolation: { best: 'O(1)', avg: 'O(log log n)', worst: 'O(n)',    fn: x => Math.log2(Math.log2(x) || 1) || 1 },
+      exponential:   { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+      ternary:       { best: 'O(1)', avg: 'O(log n)',   worst: 'O(log n)',   fn: x => Math.log2(x) },
+      // Graph & Grid Algorithms
+      bfs:           { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.5 },
+      dfs:           { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.5 },
+      dijkstra:      { best: 'O(E log V)', avg: 'O(E log V)', worst: 'O(E log V)', fn: x => x * Math.log2(x || 1) },
+      astar:         { best: 'O(1)', avg: 'O(E)',        worst: 'O(E log V)', fn: x => x * 1.8 },
+      bellman_ford:  { best: 'O(E)', avg: 'O(V·E)',     worst: 'O(V·E)',     fn: x => x * x },
+      prim:          { best: 'O(E log V)', avg: 'O(E log V)', worst: 'O(E log V)', fn: x => x * Math.log2(x || 1) },
+      kruskal:       { best: 'O(E log E)', avg: 'O(E log E)', worst: 'O(E log E)', fn: x => x * Math.log2(x || 1) },
+      toposort:      { best: 'O(V+E)', avg: 'O(V+E)',     worst: 'O(V+E)',     fn: x => x * 2.0 },
+    };
+    return complexities[algo] || complexities.bubble;
+  }
+
+  encodeState() {
+    const state = {
+      cat: this.currentCategory,
+      lang: this.currentLanguage,
+      algo: this.currentAlgorithm,
+      algoB: this.currentAlgorithmB,
+      race: this.raceMode,
+      speed: this.speed,
+      size: this.elements.arraySizeInput ? parseInt(this.elements.arraySizeInput.value) : 20,
+      preset: this.elements.presetSelect ? this.elements.presetSelect.value : "random",
+    };
+    const json = JSON.stringify(state);
+    const b64 = btoa(json);
+    const url = new URL(window.location.href);
+    url.searchParams.set("state", b64);
+    return url.toString();
+  }
+
+  loadFromURL() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const b64 = params.get("state");
+      if (!b64) return false;
+      const json = atob(b64);
+      const state = JSON.parse(json);
+      if (state.cat) {
+        this.currentCategory = state.cat;
+        if (this.elements.categorySelect) this.elements.categorySelect.value = state.cat;
+      }
+      if (state.lang) {
+        this.currentLanguage = state.lang;
+        if (this.elements.languageSelect) this.elements.languageSelect.value = state.lang;
+      }
+      if (state.algo) {
+        this.currentAlgorithm = state.algo;
+        if (this.elements.algorithmSelect) this.elements.algorithmSelect.value = state.algo;
+      }
+      if (state.algoB) {
+        this.currentAlgorithmB = state.algoB;
+        if (this.elements.algorithmSelectB) this.elements.algorithmSelectB.value = state.algoB;
+      }
+      if (state.race != null) {
+        this.raceMode = Boolean(state.race);
+        if (this.elements.raceToggle) this.elements.raceToggle.checked = this.raceMode;
+      }
+      if (state.speed) {
+        this.speed = state.speed;
+        if (this.elements.speedSlider) this.elements.speedSlider.value = state.speed;
+        if (this.elements.speedValue) this.elements.speedValue.textContent = state.speed + "ms";
+      }
+      if (state.size && this.elements.arraySizeInput) {
+        this.elements.arraySizeInput.value = state.size;
+      }
+      if (state.preset && this.elements.presetSelect) {
+        this.elements.presetSelect.value = state.preset;
+      }
+      this.onCategoryChange();
+      return true;
+    } catch (e) {
+      console.warn("Failed to load state from URL:", e);
+      return false;
+    }
+  }
+
   shareState() {
     const url = this.encodeState();
     navigator.clipboard.writeText(url).then(() => {
@@ -2755,7 +2899,11 @@ async def search(arr, target):
 
     ctx.clearRect(0, 0, W, H);
 
-    const n = this.array.length || 20;
+    const n = this.currentCategory === "graph"
+      ? (this.graphEngine.nodes.length || 8)
+      : this.currentCategory === "grid"
+        ? (this.graphEngine.gridRows * this.graphEngine.gridCols || 375)
+        : (this.array.length || 20);
     const complexityA = this.getTheoreticalComplexity(this.currentAlgorithm);
     const complexityB = isRace ? this.getTheoreticalComplexity(this.currentAlgorithmB) : null;
     const theoreticalMaxA = complexityA.fn(n);
