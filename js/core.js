@@ -362,6 +362,7 @@ class AlgorithmVisualizer {
           });
         }
         this.refreshAlgorithmSelectB();
+        this.renderPseudocode(this.currentAlgorithm);
         this.generateArray();
         this.log("Race mode: " + (this.raceMode ? "ON" : "OFF"));
       };
@@ -918,43 +919,74 @@ return -1;`,
           bfs: `// Graph / Tree BFS (Breadth-First Search)
 const nodes = getNodes();
 if (nodes.length === 0) return;
-const startId = nodes[0].id;
+const startNode = getStartNode();
+const targetNode = getTargetNode();
+const startId = startNode.id;
+const targetId = targetNode.id;
 const queue = [startId];
 const visited = new Set([startId]);
+const parent = {};
 
 while (queue.length > 0) {
   const current = queue.shift();
   await visitNode(current, "visiting");
+  if (current === targetId) {
+    log("Target reached! Reconstructing path...");
+    const path = [];
+    let c = current;
+    while (c !== undefined) { path.unshift(c); c = parent[c]; }
+    await markPath(path);
+    return;
+  }
   const neighbors = getNeighbors(current);
   for (const n of neighbors) {
     if (!visited.has(n.id)) {
       visited.add(n.id);
+      parent[n.id] = current;
       queue.push(n.id);
     }
   }
-}`,
+}
+log("Target not reachable from start!");`,
           dfs: `// Graph / Tree DFS (Depth-First Search)
 const nodes = getNodes();
 if (nodes.length === 0) return;
+const startNode = getStartNode();
+const targetNode = getTargetNode();
 const visited = new Set();
+const parent = {};
+
 async function dfs(u) {
   visited.add(u);
   await visitNode(u, "visiting");
+  if (u === targetNode.id) {
+    log("Target reached! Reconstructing path...");
+    const path = [];
+    let c = u;
+    while (c !== undefined) { path.unshift(c); c = parent[c]; }
+    await markPath(path);
+    return true;
+  }
   const neighbors = getNeighbors(u);
   for (const n of neighbors) {
     if (!visited.has(n.id)) {
-      await dfs(n.id);
+      parent[n.id] = u;
+      if (await dfs(n.id)) return true;
     }
   }
+  return false;
 }
-await dfs(nodes[0].id);`,
+await dfs(startNode.id);`,
           dijkstra: `// Graph Dijkstra Shortest Path
 const nodes = getNodes();
 if (nodes.length === 0) return;
+const startNode = getStartNode();
+const targetNode = getTargetNode();
 const dist = {};
+const parent = {};
 const visited = new Set();
 nodes.forEach(n => dist[n.id] = Infinity);
-dist[nodes[0].id] = 0;
+dist[startNode.id] = 0;
 
 while (visited.size < nodes.length) {
   let minNode = null, minDist = Infinity;
@@ -967,19 +999,29 @@ while (visited.size < nodes.length) {
   if (minNode === null) break;
   visited.add(minNode);
   await visitNode(minNode, "visiting");
+  if (minNode === targetNode.id) {
+    log("Target reached! dist=" + dist[minNode]);
+    const path = [];
+    let c = minNode;
+    while (c !== undefined) { path.unshift(c); c = parent[c]; }
+    await markPath(path);
+    return;
+  }
   const neighbors = getNeighbors(minNode);
   for (const n of neighbors) {
     if (dist[minNode] + n.weight < dist[n.id]) {
       dist[n.id] = dist[minNode] + n.weight;
+      parent[n.id] = minNode;
     }
   }
 }`,
           astar: `// A* Graph Search with heuristic
 const nodes = getNodes();
 if (nodes.length < 2) return;
-const startId = nodes[0].id;
-const targetId = nodes[nodes.length - 1].id;
-const targetNode = nodes[nodes.length - 1];
+const startNode = getStartNode();
+const targetNode = getTargetNode();
+const startId = startNode.id;
+const targetId = targetNode.id;
 const h = (nid) => {
   const n = nodes.find(x => x.id === nid);
   if (!n || !targetNode) return 0;
@@ -1000,7 +1042,14 @@ while (openSet.size > 0) {
   }
   if (current === null) break;
   await visitNode(current, "visiting");
-  if (current === targetId) { log("Target reached!"); return; }
+  if (current === targetId) {
+    log("Target reached!");
+    const path = [];
+    let c = current;
+    while (c !== undefined) { path.unshift(c); c = cameFrom[c]; }
+    await markPath(path);
+    return;
+  }
   openSet.delete(current);
   const neighbors = getNeighbors(current);
   for (const n of neighbors) {
@@ -1012,13 +1061,17 @@ while (openSet.size > 0) {
       openSet.add(n.id);
     }
   }
-}`,
+}
+log("Target not reachable!");`,
           bellman_ford: `// Bellman-Ford Shortest Path (handles negative weights)
 const nodes = getNodes();
 if (nodes.length === 0) return;
+const startNode = getStartNode();
+const targetNode = getTargetNode();
 const dist = {};
+const parent = {};
 nodes.forEach(n => dist[n.id] = Infinity);
-dist[nodes[0].id] = 0;
+dist[startNode.id] = 0;
 
 for (let i = 0; i < nodes.length - 1; i++) {
   let updated = false;
@@ -1028,19 +1081,31 @@ for (let i = 0; i < nodes.length - 1; i++) {
     for (const n of neighbors) {
       if (dist[u.id] !== Infinity && dist[u.id] + n.weight < dist[n.id]) {
         dist[n.id] = dist[u.id] + n.weight;
+        parent[n.id] = u.id;
         updated = true;
       }
     }
   }
   if (!updated) break;
+}
+const path = [];
+let c = targetNode.id;
+while (c !== undefined) { path.unshift(c); c = parent[c]; }
+if (path[0] === startNode.id) {
+  log("Path: " + path.join(" → ") + "  dist=" + dist[targetNode.id]);
+  await markPath(path);
+} else {
+  log("No path to target (possible negative cycle).");
 }`,
           prim: `// Prim's MST (Minimum Spanning Tree)
 const nodes = getNodes();
 if (nodes.length === 0) return;
+const startNode = getStartNode();
 const inMST = new Set();
 const key = {};
 nodes.forEach(n => key[n.id] = Infinity);
-key[nodes[0].id] = 0;
+key[startNode.id] = 0;
+let mstCost = 0;
 
 for (let count = 0; count < nodes.length; count++) {
   let u = null, minKey = Infinity;
@@ -1052,6 +1117,7 @@ for (let count = 0; count < nodes.length; count++) {
   });
   if (u === null) break;
   inMST.add(u);
+  if (minKey !== Infinity) mstCost += minKey;
   await visitNode(u, "visiting");
   const neighbors = getNeighbors(u);
   for (const n of neighbors) {
@@ -1059,7 +1125,9 @@ for (let count = 0; count < nodes.length; count++) {
       key[n.id] = n.weight;
     }
   }
-}`,
+}
+log("MST complete! Total cost: " + mstCost);
+await markPath([...inMST]);`,
           kruskal: `// Kruskal's MST (Minimum Spanning Tree) via edge sorting
 const nodes = getNodes();
 if (nodes.length === 0) return;
@@ -1077,16 +1145,22 @@ for (const u of nodes) {
 }
 edgesAll.sort((x, y) => x.w - y.w);
 
-let mstEdges = 0;
+let mstEdges = 0, mstCost = 0;
+const mstNodes = new Set();
 for (const e of edgesAll) {
   if (find(e.a) !== find(e.b)) {
     union(e.a, e.b);
     await visitNode(e.a, "visiting");
     await visitNode(e.b, "visiting");
+    mstNodes.add(e.a);
+    mstNodes.add(e.b);
+    mstCost += e.w;
     mstEdges++;
     if (mstEdges >= nodes.length - 1) break;
   }
-}`,
+}
+log("MST complete! Edges: " + mstEdges + ", Total cost: " + mstCost);
+await markPath([...mstNodes]);`,
           toposort: `// Topological Sort (Kahn's Algorithm) - DAG
 const nodes = getNodes();
 if (nodes.length === 0) return;
@@ -2276,20 +2350,20 @@ async def search(arr, target):
           ternary: `let left = 0, right = arr.length - 1; while (left <= right) { if (right - left < 3) { for (let k = left; k <= right; k++) { await compare(k, k); if (arr[k] === target) { await markFound(k); return k; } } break; } const m1 = left + Math.floor((right - left) / 3); const m2 = right - Math.floor((right - left) / 3); await compare(m1, m1); await compare(m2, m2); if (arr[m1] === target) { await markFound(m1); return m1; } if (arr[m2] === target) { await markFound(m2); return m2; } if (target < arr[m1]) right = m1 - 1; else if (target > arr[m2]) left = m2 + 1; else { left = m1 + 1; right = m2 - 1; } } return -1;`,
         },
         graph: {
-          bfs: `const nodes = getNodes(); if (nodes.length === 0) return; const startId = nodes[0].id; const queue = [startId]; const visited = new Set([startId]); while (queue.length > 0) { const current = queue.shift(); await visitNode(current, "visiting"); const neighbors = getNeighbors(current); for (const n of neighbors) { if (!visited.has(n.id)) { visited.add(n.id); queue.push(n.id); } } }`,
-          dfs: `const nodes = getNodes(); if (nodes.length === 0) return; const visited = new Set(); async function dfs(u) { visited.add(u); await visitNode(u, "visiting"); const neighbors = getNeighbors(u); for (const n of neighbors) { if (!visited.has(n.id)) { await dfs(n.id); } } } await dfs(nodes[0].id);`,
-          dijkstra: `const nodes = getNodes(); if (nodes.length === 0) return; const dist = {}; const visited = new Set(); nodes.forEach(n => dist[n.id] = Infinity); dist[nodes[0].id] = 0; while (visited.size < nodes.length) { let minNode = null, minDist = Infinity; nodes.forEach(n => { if (!visited.has(n.id) && dist[n.id] < minDist) { minDist = dist[n.id]; minNode = n.id; } }); if (minNode === null) break; visited.add(minNode); await visitNode(minNode, "visiting"); const neighbors = getNeighbors(minNode); for (const n of neighbors) { if (dist[minNode] + n.weight < dist[n.id]) { dist[n.id] = dist[minNode] + n.weight; } } }`,
-          astar: `const nodes = getNodes(); if (nodes.length < 2) return; const startId = nodes[0].id; const targetId = nodes[nodes.length - 1].id; const targetNode = nodes[nodes.length - 1]; const h = (nid) => { const n = nodes.find(x => x.id === nid); if (!n || !targetNode) return 0; return Math.sqrt((n.x - targetNode.x) ** 2 + (n.y - targetNode.y) ** 2) / 20; }; const openSet = new Set([startId]); const cameFrom = {}; const gScore = {}; const fScore = {}; nodes.forEach(n => { gScore[n.id] = Infinity; fScore[n.id] = Infinity; }); gScore[startId] = 0; fScore[startId] = h(startId); while (openSet.size > 0) { let current = null, currentF = Infinity; for (const id of openSet) { if ((fScore[id] ?? Infinity) < currentF) { currentF = fScore[id]; current = id; } } if (current === null) break; await visitNode(current, "visiting"); if (current === targetId) { log("Target reached!"); return; } openSet.delete(current); const neighbors = getNeighbors(current); for (const n of neighbors) { const tentative = (gScore[current] ?? Infinity) + n.weight; if (tentative < (gScore[n.id] ?? Infinity)) { cameFrom[n.id] = current; gScore[n.id] = tentative; fScore[n.id] = tentative + h(n.id); openSet.add(n.id); } } }`,
-          bellman_ford: `const nodes = getNodes(); if (nodes.length === 0) return; const dist = {}; nodes.forEach(n => dist[n.id] = Infinity); dist[nodes[0].id] = 0; for (let i = 0; i < nodes.length - 1; i++) { let updated = false; for (const u of nodes) { await visitNode(u.id, "visiting"); const neighbors = getNeighbors(u.id); for (const n of neighbors) { if (dist[u.id] !== Infinity && dist[u.id] + n.weight < dist[n.id]) { dist[n.id] = dist[u.id] + n.weight; updated = true; } } } if (!updated) break; }`,
-          prim: `const nodes = getNodes(); if (nodes.length === 0) return; const inMST = new Set(); const key = {}; nodes.forEach(n => key[n.id] = Infinity); key[nodes[0].id] = 0; for (let count = 0; count < nodes.length; count++) { let u = null, minKey = Infinity; nodes.forEach(n => { if (!inMST.has(n.id) && key[n.id] < minKey) { minKey = key[n.id]; u = n.id; } }); if (u === null) break; inMST.add(u); await visitNode(u, "visiting"); const neighbors = getNeighbors(u); for (const n of neighbors) { if (!inMST.has(n.id) && n.weight < key[n.id]) { key[n.id] = n.weight; } } }`,
-          kruskal: `const nodes = getNodes(); if (nodes.length === 0) return; const parent = {}; nodes.forEach(n => parent[n.id] = n.id); const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }; const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }; const edgesAll = []; for (const u of nodes) { const neighbors = getNeighbors(u.id); for (const n of neighbors) { if (u.id < n.id) edgesAll.push({ a: u.id, b: n.id, w: n.weight }); } } edgesAll.sort((x, y) => x.w - y.w); let mstEdges = 0; for (const e of edgesAll) { if (find(e.a) !== find(e.b)) { union(e.a, e.b); await visitNode(e.a, "visiting"); await visitNode(e.b, "visiting"); mstEdges++; if (mstEdges >= nodes.length - 1) break; } }`,
+          bfs: `const nodes = getNodes(); if (nodes.length === 0) return; const sN = getStartNode(); const tN = getTargetNode(); const queue = [sN.id]; const visited = new Set([sN.id]); const par = {}; while (queue.length > 0) { const cur = queue.shift(); await visitNode(cur, "visiting"); if (cur === tN.id) { const p = []; let c = cur; while (c !== undefined) { p.unshift(c); c = par[c]; } await markPath(p); return; } const nb = getNeighbors(cur); for (const n of nb) { if (!visited.has(n.id)) { visited.add(n.id); par[n.id] = cur; queue.push(n.id); } } }`,
+          dfs: `const nodes = getNodes(); if (nodes.length === 0) return; const sN = getStartNode(); const tN = getTargetNode(); const visited = new Set(); const par = {}; async function dfs(u) { visited.add(u); await visitNode(u, "visiting"); if (u === tN.id) { const p = []; let c = u; while (c !== undefined) { p.unshift(c); c = par[c]; } await markPath(p); return true; } const nb = getNeighbors(u); for (const n of nb) { if (!visited.has(n.id)) { par[n.id] = u; if (await dfs(n.id)) return true; } } return false; } await dfs(sN.id);`,
+          dijkstra: `const nodes = getNodes(); if (nodes.length === 0) return; const sN = getStartNode(); const tN = getTargetNode(); const dist = {}; const par = {}; const vis = new Set(); nodes.forEach(n => dist[n.id] = Infinity); dist[sN.id] = 0; while (vis.size < nodes.length) { let mn = null, md = Infinity; nodes.forEach(n => { if (!vis.has(n.id) && dist[n.id] < md) { md = dist[n.id]; mn = n.id; } }); if (mn === null) break; vis.add(mn); await visitNode(mn, "visiting"); if (mn === tN.id) { const p = []; let c = mn; while (c !== undefined) { p.unshift(c); c = par[c]; } await markPath(p); return; } const nb = getNeighbors(mn); for (const n of nb) { if (dist[mn] + n.weight < dist[n.id]) { dist[n.id] = dist[mn] + n.weight; par[n.id] = mn; } } }`,
+          astar: `const nodes = getNodes(); if (nodes.length < 2) return; const sN = getStartNode(); const tN = getTargetNode(); const h = (nid) => { const n = nodes.find(x => x.id === nid); return n && tN ? Math.sqrt((n.x-tN.x)**2+(n.y-tN.y)**2)/20 : 0; }; const openSet = new Set([sN.id]); const came = {}; const g = {}; const f = {}; nodes.forEach(n => { g[n.id] = Infinity; f[n.id] = Infinity; }); g[sN.id] = 0; f[sN.id] = h(sN.id); while (openSet.size > 0) { let cur = null, cf = Infinity; for (const id of openSet) { if ((f[id]??Infinity) < cf) { cf = f[id]; cur = id; } } if (!cur) break; await visitNode(cur, "visiting"); if (cur === tN.id) { const p = []; let c = cur; while (c !== undefined) { p.unshift(c); c = came[c]; } await markPath(p); return; } openSet.delete(cur); for (const n of getNeighbors(cur)) { const t = (g[cur]??Infinity)+n.weight; if (t < (g[n.id]??Infinity)) { came[n.id]=cur; g[n.id]=t; f[n.id]=t+h(n.id); openSet.add(n.id); } } }`,
+          bellman_ford: `const nodes = getNodes(); if (nodes.length === 0) return; const sN = getStartNode(); const tN = getTargetNode(); const dist = {}; const par = {}; nodes.forEach(n => dist[n.id] = Infinity); dist[sN.id] = 0; for (let i = 0; i < nodes.length - 1; i++) { let upd = false; for (const u of nodes) { await visitNode(u.id, "visiting"); for (const n of getNeighbors(u.id)) { if (dist[u.id] !== Infinity && dist[u.id]+n.weight < dist[n.id]) { dist[n.id]=dist[u.id]+n.weight; par[n.id]=u.id; upd=true; } } } if (!upd) break; } const p=[]; let c=tN.id; while(c!==undefined){p.unshift(c);c=par[c];} if(p[0]===sN.id){await markPath(p);}`,
+          prim: `const nodes = getNodes(); if (nodes.length === 0) return; const sN = getStartNode(); const inMST = new Set(); const key = {}; nodes.forEach(n => key[n.id] = Infinity); key[sN.id] = 0; let cost=0; for (let i = 0; i < nodes.length; i++) { let u=null,mk=Infinity; nodes.forEach(n => { if(!inMST.has(n.id)&&key[n.id]<mk){mk=key[n.id];u=n.id;} }); if(u===null)break; inMST.add(u); if(mk!==Infinity)cost+=mk; await visitNode(u, "visiting"); for(const n of getNeighbors(u)){if(!inMST.has(n.id)&&n.weight<key[n.id]){key[n.id]=n.weight;}} } log("MST cost: "+cost); await markPath([...inMST]);`,
+          kruskal: `const nodes = getNodes(); if (nodes.length === 0) return; const par = {}; nodes.forEach(n => par[n.id]=n.id); const find=(x)=>{while(par[x]!==x){par[x]=par[par[x]];x=par[x];}return x;}; const union=(a,b)=>{const ra=find(a),rb=find(b);if(ra!==rb)par[ra]=rb;}; const ea=[]; for(const u of nodes){for(const n of getNeighbors(u.id)){if(u.id<n.id)ea.push({a:u.id,b:n.id,w:n.weight});}} ea.sort((x,y)=>x.w-y.w); let me=0,cost=0; const mn=new Set(); for(const e of ea){if(find(e.a)!==find(e.b)){union(e.a,e.b);await visitNode(e.a,"visiting");await visitNode(e.b,"visiting");mn.add(e.a);mn.add(e.b);cost+=e.w;me++;if(me>=nodes.length-1)break;}} log("MST cost: "+cost); await markPath([...mn]);`,
           toposort: `const nodes = getNodes(); if (nodes.length === 0) return; const inDeg = {}; nodes.forEach(n => inDeg[n.id] = 0); for (const u of nodes) { const neighbors = getNeighbors(u.id); for (const n of neighbors) inDeg[n.id] = (inDeg[n.id] ?? 0) + 1; } const queue = nodes.filter(n => (inDeg[n.id] ?? 0) === 0).map(n => n.id); const order = []; while (queue.length > 0) { const u = queue.shift(); order.push(u); await visitNode(u, "visiting"); const neighbors = getNeighbors(u); for (const n of neighbors) { inDeg[n.id]--; if (inDeg[n.id] === 0) queue.push(n.id); } } if (order.length === nodes.length) log("Topo order: " + order.join(",")); else log("Cycle detected in graph");`,
         },
         grid: {
-          bfs: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const queue = [{ r: start.row, c: start.col, d: 0 }]; const visited = new Set([\`\${start.row},\${start.col}\`]); while (queue.length > 0) { const curr = queue.shift(); await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached!"); return; } const neighbors = getGridNeighbors(curr.r, curr.c); for (const n of neighbors) { const key = \`\${n.row},\${n.col}\`; if (!visited.has(key)) { visited.add(key); queue.push({ r: n.row, c: n.col, d: curr.d + 1 }); } } }`,
-          dfs: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const visited = new Set(); async function dfs(r, c) { const key = \`\${r},\${c}\`; if (visited.has(key)) return false; visited.add(key); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); return true; } const neighbors = getGridNeighbors(r, c); for (const n of neighbors) { if (await dfs(n.row, n.col)) return true; } return false; } await dfs(start.row, start.col);`,
-          dijkstra: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const dist = {}; const sKey = \`\${start.row},\${start.col}\`; dist[sKey] = 0; const pq = [{ r: start.row, c: start.col, d: 0 }]; while (pq.length > 0) { pq.sort((a, b) => a.d - b.d); const curr = pq.shift(); const cKey = \`\${curr.r},\${curr.c}\`; if (curr.d > (dist[cKey] ?? Infinity)) continue; await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached!"); return; } const neighbors = getGridNeighbors(curr.r, curr.c); for (const n of neighbors) { const nKey = \`\${n.row},\${n.col}\`; const nd = curr.d + 1; if (nd < (dist[nKey] ?? Infinity)) { dist[nKey] = nd; pq.push({ r: n.row, c: n.col, d: nd }); } } }`,
-          astar: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const h = (r, c) => Math.abs(r - target.row) + Math.abs(c - target.col); const openSet = new Set([\`\${start.row},\${start.col}\`]); const cameFrom = {}; const gScore = {}; const fScore = {}; const sKey = \`\${start.row},\${start.col}\`; gScore[sKey] = 0; fScore[sKey] = h(start.row, start.col); while (openSet.size > 0) { let curr = null, currKey = null, currF = Infinity; for (const k of openSet) { const f = fScore[k] ?? Infinity; if (f < currF) { currF = f; currKey = k; } } if (!currKey) break; const [rs, cs] = currKey.split(","); const r = parseInt(rs), c = parseInt(cs); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); return; } openSet.delete(currKey); const neighbors = getGridNeighbors(r, c); for (const n of neighbors) { const nKey = \`\${n.row},\${n.col}\`; const tentative = (gScore[currKey] ?? Infinity) + 1; if (tentative < (gScore[nKey] ?? Infinity)) { cameFrom[nKey] = currKey; gScore[nKey] = tentative; fScore[nKey] = tentative + h(n.row, n.col); openSet.add(nKey); } } }`,
+          bfs: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const queue = [{ r: start.row, c: start.col }]; const visited = new Set([\`\${start.row},\${start.col}\`]); const parent = {}; while (queue.length > 0) { const curr = queue.shift(); await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached!"); let k = \`\${curr.r},\${curr.c}\`; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return; } const nb = getGridNeighbors(curr.r, curr.c); for (const n of nb) { const key = \`\${n.row},\${n.col}\`; if (!visited.has(key)) { visited.add(key); parent[key] = \`\${curr.r},\${curr.c}\`; queue.push({ r: n.row, c: n.col }); } } }`,
+          dfs: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const visited = new Set(); const parent = {}; async function dfs(r, c) { const key = \`\${r},\${c}\`; if (visited.has(key)) return false; visited.add(key); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); let k = key; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return true; } const nb = getGridNeighbors(r, c); for (const n of nb) { const nk = \`\${n.row},\${n.col}\`; if (!parent[nk]) parent[nk] = key; if (await dfs(n.row, n.col)) return true; } return false; } await dfs(start.row, start.col);`,
+          dijkstra: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const dist = {}; const parent = {}; const sKey = \`\${start.row},\${start.col}\`; dist[sKey] = 0; const pq = [{ r: start.row, c: start.col, d: 0 }]; while (pq.length > 0) { pq.sort((a, b) => a.d - b.d); const curr = pq.shift(); const cKey = \`\${curr.r},\${curr.c}\`; if (curr.d > (dist[cKey] ?? Infinity)) continue; await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached! dist=" + curr.d); let k = cKey; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return; } const nb = getGridNeighbors(curr.r, curr.c); for (const n of nb) { const nKey = \`\${n.row},\${n.col}\`; const nd = curr.d + 1; if (nd < (dist[nKey] ?? Infinity)) { dist[nKey] = nd; parent[nKey] = cKey; pq.push({ r: n.row, c: n.col, d: nd }); } } }`,
+          astar: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const h = (r, c) => Math.abs(r - target.row) + Math.abs(c - target.col); const openSet = new Set([\`\${start.row},\${start.col}\`]); const cameFrom = {}; const gScore = {}; const fScore = {}; const sKey = \`\${start.row},\${start.col}\`; gScore[sKey] = 0; fScore[sKey] = h(start.row, start.col); while (openSet.size > 0) { let currKey = null, currF = Infinity; for (const k of openSet) { const f = fScore[k] ?? Infinity; if (f < currF) { currF = f; currKey = k; } } if (!currKey) break; const [rs, cs] = currKey.split(","); const r = parseInt(rs), c = parseInt(cs); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); let k = currKey; while (cameFrom[k]) { const [pr,pc] = cameFrom[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = cameFrom[k]; } return; } openSet.delete(currKey); const nb = getGridNeighbors(r, c); for (const n of nb) { const nKey = \`\${n.row},\${n.col}\`; const tentative = (gScore[currKey] ?? Infinity) + 1; if (tentative < (gScore[nKey] ?? Infinity)) { cameFrom[nKey] = currKey; gScore[nKey] = tentative; fScore[nKey] = tentative + h(n.row, n.col); openSet.add(nKey); } } }`,
         }
       },
       python: {
@@ -2423,10 +2497,15 @@ async def search(arr, target):
           }
         }
         if (isA) {
-          this.highlightPseudocode(4);
+          this.highlightPseudocode('visitNode', side);
           this.saveSnapshot("visitNode");
         }
         await this.sleep(this.speed);
+        // Transition visiting → visited so explored frontier shows purple, path stays green
+        if (node && color === 'visiting' && node.status === 'visiting') {
+          node.status = 'visited';
+          this.graphRenderer.render();
+        }
       },
 
       visitEdge: async (fromId, toId, color = "exploring") => {
@@ -2443,7 +2522,7 @@ async def search(arr, target):
           this.graphRenderer.render();
         }
         if (isA) {
-          this.highlightPseudocode(5);
+          this.highlightPseudocode('visitEdge', side);
           this.saveSnapshot("visitEdge");
         }
         await this.sleep(this.speed / 2);
@@ -2497,7 +2576,7 @@ async def search(arr, target):
           this.gridRenderer.render();
         }
         if (isA) {
-          this.highlightPseudocode(4);
+          this.highlightPseudocode('visitGridCell', side);
           this.saveSnapshot("visitGridCell");
         }
         await this.sleep(this.speed / 2);
@@ -2505,6 +2584,16 @@ async def search(arr, target):
 
       getNeighbors: (nodeId) => this.graphEngine.getNeighbors(nodeId),
       getNodes: () => this.graphEngine.nodes,
+      // Return the designated start node (marked green on the graph)
+      getStartNode: () => {
+        return this.graphEngine.nodes.find(n => n.id === this.graphEngine.startNodeId)
+          || this.graphEngine.nodes[0] || null;
+      },
+      // Return the designated target node (marked red on the graph)
+      getTargetNode: () => {
+        return this.graphEngine.nodes.find(n => n.id === this.graphEngine.targetNodeId)
+          || this.graphEngine.nodes[this.graphEngine.nodes.length - 1] || null;
+      },
       getStartCell: () => {
         const s = this.graphEngine.startCell;
         if (!s) return s;
@@ -2515,11 +2604,14 @@ async def search(arr, target):
         if (!t) return t;
         return { row: t.row, col: t.col, r: t.row, c: t.col };
       },
+      // Returns walkable neighbors only (walls are excluded)
       getGridNeighbors: (r, c) => {
-        return this.graphEngine.getGridNeighbors(r, c).map(cell => ({
-          row: cell.row, col: cell.col, r: cell.row, c: cell.col,
-          type: cell.type, distance: cell.distance
-        }));
+        return this.graphEngine.getGridNeighbors(r, c)
+          .filter(cell => cell.type !== 'wall')
+          .map(cell => ({
+            row: cell.row, col: cell.col, r: cell.row, c: cell.col,
+            type: cell.type, distance: cell.distance
+          }));
       },
 
       sleep: async (ms) => {
@@ -2567,6 +2659,17 @@ async def search(arr, target):
         await this.sleep(Math.max(100, this.speed));
       }
     }
+    // Reset graph/grid visual state before each run so stale colors from
+    // a previous run don't bleed through.
+    if (isA) {
+      if (category === 'graph') {
+        this.graphEngine.resetGraphState();
+        this.graphRenderer.render();
+      } else if (category === 'grid') {
+        this.graphEngine.resetGridState();
+        this.gridRenderer.render();
+      }
+    }
 
     if (category === "search") {
       const asyncFunction = new Function(
@@ -2592,6 +2695,7 @@ async def search(arr, target):
         'arr', 'compare', 'swap', 'renderArray', 'sleep', 'log', 'markFound',
         'visitNode', 'getNeighbors', 'getNodes', 'markPath',
         'visitGridCell', 'getStartCell', 'getTargetCell', 'getGridNeighbors',
+        'visitEdge', 'updateDistance', 'getStartNode', 'getTargetNode',
         `
         return (async () => {
           ${code}
@@ -2614,7 +2718,11 @@ async def search(arr, target):
         api.visitGridCell,
         api.getStartCell,
         api.getTargetCell,
-        api.getGridNeighbors
+        api.getGridNeighbors,
+        api.visitEdge,
+        api.updateDistance,
+        api.getStartNode,
+        api.getTargetNode
       );
       if (result && Array.isArray(result)) {
         runtimeArr = result;
@@ -3205,30 +3313,71 @@ async def search(arr, target):
     }
   }
 
+  /**
+   * Return the 1-based pseudocode line number for a given operation type,
+   * keyed on the CURRENT category + algorithm (or side-B algorithm for race).
+   * Falls back to line 1 if nothing matches.
+   */
+  getOpLineNumber(opType, side = 'a') {
+    const cat  = this.currentCategory;
+    const algo = side === 'b' ? this.currentAlgorithmB : this.currentAlgorithm;
+    const map = {
+      sort: {
+        _default:  { compare: 3, swap: 4, found: 4 },
+        bubble:    { compare: 3, swap: 4, found: 4 },
+        selection: { compare: 4, swap: 6, found: 6 },
+        insertion: { compare: 4, swap: 5, found: 5 },
+        merge:     { compare: 3, swap: 3, found: 3 },
+        quick:     { compare: 2, swap: 2, found: 2 },
+        heap:      { compare: 2, swap: 4, found: 4 },
+        shell:     { compare: 5, swap: 6, found: 6 },
+        cocktail:  { compare: 5, swap: 5, found: 5 },
+        counting:  { compare: 3, swap: 6, found: 6 },
+        radix:     { compare: 4, swap: 4, found: 4 },
+      },
+      search: {
+        _default:      { compare: 2, found: 3, swap: 2 },
+        linear:        { compare: 2, found: 3, swap: 2 },
+        binary:        { compare: 3, found: 4, swap: 3 },
+        interpolation: { compare: 3, found: 4, swap: 3 },
+        exponential:   { compare: 3, found: 3, swap: 3 },
+        ternary:       { compare: 5, found: 5, swap: 5 },
+      },
+      graph: {
+        _default:     { visitNode: 4, visitEdge: 5, compare: 4, swap: 4, found: 4 },
+        bfs:          { visitNode: 4, visitEdge: 5, compare: 4, swap: 4, found: 4 },
+        dfs:          { visitNode: 5, visitEdge: 6, compare: 5, swap: 5, found: 5 },
+        dijkstra:     { visitNode: 5, visitEdge: 6, compare: 7, swap: 5, found: 5 },
+        astar:        { visitNode: 4, visitEdge: 7, compare: 7, swap: 4, found: 5 },
+        bellman_ford: { visitNode: 3, visitEdge: 3, compare: 4, swap: 4, found: 4 },
+        prim:         { visitNode: 6, visitEdge: 7, compare: 4, swap: 4, found: 4 },
+        kruskal:      { visitNode: 4, visitEdge: 5, compare: 3, swap: 3, found: 3 },
+        toposort:     { visitNode: 5, visitEdge: 6, compare: 5, swap: 5, found: 5 },
+      },
+      grid: {
+        _default: { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
+        bfs:      { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
+        dfs:      { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
+        dijkstra: { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
+        astar:    { visitGridCell: 4, compare: 4, swap: 4, found: 5 },
+      }
+    };
+    const catMap  = map[cat]  || map.sort;
+    const algoMap = catMap[algo] || catMap._default || {};
+    const defMap  = catMap._default || {};
+    return (algoMap[opType] ?? defMap[opType]) || 1;
+  }
+
   highlightPseudocode(lineNumOrOpType, side = 'a') {
     const targetBody = side === 'b' ? this.elements.pseudocodeBodyB : this.elements.pseudocodeBody;
     if (!targetBody) return;
 
-    if (typeof lineNumOrOpType === "number") {
-      this.pseudocodeManager.highlightLine(targetBody, lineNumOrOpType);
-      if (side === 'a') this.currentPseudocodeLine = lineNumOrOpType;
-    } else {
-      const lines = targetBody.querySelectorAll('.pseudocode-line');
-      if (!lines.length) return;
-      lines.forEach(el => el.classList.remove('active'));
-      let targetIdx = 0;
-      if (lineNumOrOpType === 'compare') targetIdx = 2;
-      else if (lineNumOrOpType === 'swap') targetIdx = 3;
-      else if (lineNumOrOpType === 'found') targetIdx = 3;
-      else targetIdx = (this.currentPseudocodeLine + 1) % lines.length;
+    const lineNum = typeof lineNumOrOpType === 'number'
+      ? lineNumOrOpType
+      : this.getOpLineNumber(lineNumOrOpType, side);
 
-      const lineEl = lines[targetIdx];
-      if (lineEl) {
-        lineEl.classList.add('active');
-        if (side === 'a') this.currentPseudocodeLine = targetIdx;
-        targetBody.scrollTop = lineEl.offsetTop - targetBody.clientHeight / 2 + lineEl.clientHeight / 2;
-      }
-    }
+    this.pseudocodeManager.highlightLine(targetBody, lineNum);
+    if (side === 'a') this.currentPseudocodeLine = lineNum;
   }
 
   // ── Snapshot System (Undo / Redo Step Back / Forward) ─────────────────
