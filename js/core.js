@@ -372,6 +372,7 @@ class AlgorithmVisualizer {
     if (this.elements.algorithmSelectB) {
       this.elements.algorithmSelectB.onchange = () => {
         this.currentAlgorithmB = this.elements.algorithmSelectB.value;
+        this.renderPseudocode(this.currentAlgorithm);
       };
     }
 
@@ -547,6 +548,16 @@ class AlgorithmVisualizer {
     this.refreshAlgorithmOptions();
     this.refreshAlgorithmSelectB();
     this.setExampleCode();
+
+    if (this.raceMode) {
+      if (this.elements.vizSideB) this.elements.vizSideB.style.display = "";
+      if (this.elements.vizWrapper) this.elements.vizWrapper.classList.add("race-mode");
+      if (this.elements.statsCardB) this.elements.statsCardB.style.display = "";
+      if (this.elements.raceOnlyGroups) {
+        this.elements.raceOnlyGroups.forEach(el => el.style.display = "");
+      }
+      this.renderPseudocode(this.currentAlgorithm);
+    }
   }
 
   // Refresh algorithm dropdown based on current category
@@ -1243,7 +1254,7 @@ async function dfsGrid(r, c) {
   return false;
 }
 await dfsGrid(start.row, start.col);`,
-          dijkstra: `// Grid Dijkstra Pathfinding
+          dijkstra: `// Grid Dijkstra Pathfinding (uses terrain weights: grass=2, sand=4, mud=8)
 const start = getStartCell();
 const target = getTargetCell();
 if (!start || !target) return;
@@ -1259,7 +1270,7 @@ while (pq.length > 0) {
   if (curr.d > (dist[cKey] ?? Infinity)) continue;
   await visitGridCell(curr.r, curr.c, "visiting");
   if (curr.r === target.row && curr.c === target.col) {
-    log("Target reached!");
+    log("Target reached! Cost=" + curr.d);
     let p = target;
     while (p) {
       await visitGridCell(p.row ?? p.r, p.col ?? p.c, "path");
@@ -1270,7 +1281,7 @@ while (pq.length > 0) {
   const neighbors = getGridNeighbors(curr.r, curr.c);
   for (const n of neighbors) {
     const nKey = \`\${n.row},\${n.col}\`;
-    const nd = curr.d + 1;
+    const nd = curr.d + (n.weight ?? 1);
     if (nd < (dist[nKey] ?? Infinity)) {
       dist[nKey] = nd;
       parent[nKey] = { row: curr.r, col: curr.c };
@@ -1278,7 +1289,7 @@ while (pq.length > 0) {
     }
   }
 }`,
-          astar: `// Grid A* Pathfinding (Manhattan heuristic)
+          astar: `// Grid A* Pathfinding (Manhattan heuristic + terrain weights)
 const start = getStartCell();
 const target = getTargetCell();
 if (!start || !target) return;
@@ -1302,7 +1313,7 @@ while (openSet.size > 0) {
   const r = parseInt(rs), c = parseInt(cs);
   await visitGridCell(r, c, "visiting");
   if (r === target.row && c === target.col) {
-    log("Target reached!");
+    log("Target reached! Cost=" + (gScore[currKey] ?? 0));
     let temp = { r, c };
     while (temp) {
       await visitGridCell(temp.r, temp.c, "path");
@@ -1320,7 +1331,7 @@ while (openSet.size > 0) {
   const neighbors = getGridNeighbors(r, c);
   for (const n of neighbors) {
     const nKey = \`\${n.row},\${n.col}\`;
-    const tentative = (gScore[currKey] ?? Infinity) + 1;
+    const tentative = (gScore[currKey] ?? Infinity) + (n.weight ?? 1);
     if (tentative < (gScore[nKey] ?? Infinity)) {
       cameFrom[nKey] = currKey;
       gScore[nKey] = tentative;
@@ -2362,8 +2373,8 @@ async def search(arr, target):
         grid: {
           bfs: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const queue = [{ r: start.row, c: start.col }]; const visited = new Set([\`\${start.row},\${start.col}\`]); const parent = {}; while (queue.length > 0) { const curr = queue.shift(); await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached!"); let k = \`\${curr.r},\${curr.c}\`; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return; } const nb = getGridNeighbors(curr.r, curr.c); for (const n of nb) { const key = \`\${n.row},\${n.col}\`; if (!visited.has(key)) { visited.add(key); parent[key] = \`\${curr.r},\${curr.c}\`; queue.push({ r: n.row, c: n.col }); } } }`,
           dfs: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const visited = new Set(); const parent = {}; async function dfs(r, c) { const key = \`\${r},\${c}\`; if (visited.has(key)) return false; visited.add(key); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); let k = key; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return true; } const nb = getGridNeighbors(r, c); for (const n of nb) { const nk = \`\${n.row},\${n.col}\`; if (!parent[nk]) parent[nk] = key; if (await dfs(n.row, n.col)) return true; } return false; } await dfs(start.row, start.col);`,
-          dijkstra: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const dist = {}; const parent = {}; const sKey = \`\${start.row},\${start.col}\`; dist[sKey] = 0; const pq = [{ r: start.row, c: start.col, d: 0 }]; while (pq.length > 0) { pq.sort((a, b) => a.d - b.d); const curr = pq.shift(); const cKey = \`\${curr.r},\${curr.c}\`; if (curr.d > (dist[cKey] ?? Infinity)) continue; await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached! dist=" + curr.d); let k = cKey; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return; } const nb = getGridNeighbors(curr.r, curr.c); for (const n of nb) { const nKey = \`\${n.row},\${n.col}\`; const nd = curr.d + 1; if (nd < (dist[nKey] ?? Infinity)) { dist[nKey] = nd; parent[nKey] = cKey; pq.push({ r: n.row, c: n.col, d: nd }); } } }`,
-          astar: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const h = (r, c) => Math.abs(r - target.row) + Math.abs(c - target.col); const openSet = new Set([\`\${start.row},\${start.col}\`]); const cameFrom = {}; const gScore = {}; const fScore = {}; const sKey = \`\${start.row},\${start.col}\`; gScore[sKey] = 0; fScore[sKey] = h(start.row, start.col); while (openSet.size > 0) { let currKey = null, currF = Infinity; for (const k of openSet) { const f = fScore[k] ?? Infinity; if (f < currF) { currF = f; currKey = k; } } if (!currKey) break; const [rs, cs] = currKey.split(","); const r = parseInt(rs), c = parseInt(cs); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); let k = currKey; while (cameFrom[k]) { const [pr,pc] = cameFrom[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = cameFrom[k]; } return; } openSet.delete(currKey); const nb = getGridNeighbors(r, c); for (const n of nb) { const nKey = \`\${n.row},\${n.col}\`; const tentative = (gScore[currKey] ?? Infinity) + 1; if (tentative < (gScore[nKey] ?? Infinity)) { cameFrom[nKey] = currKey; gScore[nKey] = tentative; fScore[nKey] = tentative + h(n.row, n.col); openSet.add(nKey); } } }`,
+          dijkstra: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const dist = {}; const parent = {}; const sKey = \`\${start.row},\${start.col}\`; dist[sKey] = 0; const pq = [{ r: start.row, c: start.col, d: 0 }]; while (pq.length > 0) { pq.sort((a, b) => a.d - b.d); const curr = pq.shift(); const cKey = \`\${curr.r},\${curr.c}\`; if (curr.d > (dist[cKey] ?? Infinity)) continue; await visitGridCell(curr.r, curr.c, "visiting"); if (curr.r === target.row && curr.c === target.col) { log("Target reached! cost=" + curr.d); let k = cKey; while (parent[k]) { const [pr,pc] = parent[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = parent[k]; } return; } const nb = getGridNeighbors(curr.r, curr.c); for (const n of nb) { const nKey = \`\${n.row},\${n.col}\`; const nd = curr.d + (n.weight ?? 1); if (nd < (dist[nKey] ?? Infinity)) { dist[nKey] = nd; parent[nKey] = cKey; pq.push({ r: n.row, c: n.col, d: nd }); } } }`,
+          astar: `const start = getStartCell(); const target = getTargetCell(); if (!start || !target) return; const h = (r, c) => Math.abs(r - target.row) + Math.abs(c - target.col); const openSet = new Set([\`\${start.row},\${start.col}\`]); const cameFrom = {}; const gScore = {}; const fScore = {}; const sKey = \`\${start.row},\${start.col}\`; gScore[sKey] = 0; fScore[sKey] = h(start.row, start.col); while (openSet.size > 0) { let currKey = null, currF = Infinity; for (const k of openSet) { const f = fScore[k] ?? Infinity; if (f < currF) { currF = f; currKey = k; } } if (!currKey) break; const [rs, cs] = currKey.split(","); const r = parseInt(rs), c = parseInt(cs); await visitGridCell(r, c, "visiting"); if (r === target.row && c === target.col) { log("Target reached!"); let k = currKey; while (cameFrom[k]) { const [pr,pc] = cameFrom[k].split(","); await visitGridCell(parseInt(pr), parseInt(pc), "path"); k = cameFrom[k]; } return; } openSet.delete(currKey); const nb = getGridNeighbors(r, c); for (const n of nb) { const nKey = \`\${n.row},\${n.col}\`; const tentative = (gScore[currKey] ?? Infinity) + (n.weight ?? 1); if (tentative < (gScore[nKey] ?? Infinity)) { cameFrom[nKey] = currKey; gScore[nKey] = tentative; fScore[nKey] = tentative + h(n.row, n.col); openSet.add(nKey); } } }`,
         }
       },
       python: {
@@ -2486,22 +2497,19 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        this.highlightPseudocode('visitNode', side);
+        if (isA) this.saveSnapshot("visitNode");
         const node = this.graphEngine.nodes.find(n => n.id === nodeId || n.label === String(nodeId));
         if (node) {
           node.status = color;
           this.graphRenderer.render();
           if (this.musicalMode) {
             this.sounds.playMusical(node.id * 10, 50, [10, 20, 30, 40, 50, 60, 70, 80]);
-          } else {
+          } else if (isA) {
             this.sounds.play("compare");
           }
         }
-        if (isA) {
-          this.highlightPseudocode('visitNode', side);
-          this.saveSnapshot("visitNode");
-        }
         await this.sleep(this.speed);
-        // Transition visiting → visited so explored frontier shows purple, path stays green
         if (node && color === 'visiting' && node.status === 'visiting') {
           node.status = 'visited';
           this.graphRenderer.render();
@@ -2513,6 +2521,8 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        this.highlightPseudocode('visitEdge', side);
+        if (isA) this.saveSnapshot("visitEdge");
         const edge = this.graphEngine.edges.find(e => 
           (e.source === fromId && e.target === toId) ||
           (!this.graphEngine.isDirected && e.source === toId && e.target === fromId)
@@ -2520,10 +2530,6 @@ async def search(arr, target):
         if (edge) {
           edge.status = color;
           this.graphRenderer.render();
-        }
-        if (isA) {
-          this.highlightPseudocode('visitEdge', side);
-          this.saveSnapshot("visitEdge");
         }
         await this.sleep(this.speed / 2);
       },
@@ -2538,9 +2544,7 @@ async def search(arr, target):
           node.distance = distance;
           this.graphRenderer.render();
         }
-        if (isA) {
-          this.saveSnapshot("updateDistance");
-        }
+        if (isA) this.saveSnapshot("updateDistance");
         await this.sleep(this.speed / 2);
       },
 
@@ -2549,6 +2553,7 @@ async def search(arr, target):
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
+        this.highlightPseudocode('found', side);
         if (Array.isArray(pathNodes)) {
           pathNodes.forEach(id => {
             const n = this.graphEngine.nodes.find(node => node.id === id || node.label === String(id));
@@ -2565,20 +2570,18 @@ async def search(arr, target):
 
       visitGridCell: async (r, c, type = "visiting") => {
         if (this.shouldStop) return;
+        if (!this.graphEngine.grid[r] || !this.graphEngine.grid[r][c]) return;
+        const cell = this.graphEngine.grid[r][c];
+        if (cell.type === "wall") return;
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
-        if (this.graphEngine.grid[r] && this.graphEngine.grid[r][c]) {
-          const cell = this.graphEngine.grid[r][c];
-          if (cell.type !== "start" && cell.type !== "target") {
-            cell.type = type;
-          }
-          this.gridRenderer.render();
+        this.highlightPseudocode(type === "path" ? 'found' : 'visitGridCell', side);
+        if (isA) this.saveSnapshot("visitGridCell");
+        if (cell.type !== "start" && cell.type !== "target") {
+          cell.type = type;
         }
-        if (isA) {
-          this.highlightPseudocode('visitGridCell', side);
-          this.saveSnapshot("visitGridCell");
-        }
+        this.gridRenderer.render();
         await this.sleep(this.speed / 2);
       },
 
@@ -2604,14 +2607,20 @@ async def search(arr, target):
         if (!t) return t;
         return { row: t.row, col: t.col, r: t.row, c: t.col };
       },
-      // Returns walkable neighbors only (walls are excluded)
+      // Returns walkable neighbors only (walls are excluded), with terrain weight.
       getGridNeighbors: (r, c) => {
+        const weights = this.graphEngine.terrainWeights || { empty: 1, grass: 2, sand: 4, mud: 8 };
         return this.graphEngine.getGridNeighbors(r, c)
           .filter(cell => cell.type !== 'wall')
-          .map(cell => ({
-            row: cell.row, col: cell.col, r: cell.row, c: cell.col,
-            type: cell.type, distance: cell.distance
-          }));
+          .map(cell => {
+            const terrain = cell.terrain || 'empty';
+            const weight = weights[terrain] ?? 1;
+            return {
+              row: cell.row, col: cell.col, r: cell.row, c: cell.col,
+              type: cell.type, distance: cell.distance,
+              terrain: terrain, weight: weight
+            };
+          });
       },
 
       sleep: async (ms) => {

@@ -76,8 +76,8 @@ class GridRenderer {
       const cell = this.engine.grid[pos.row][pos.col];
       if      (cell.type === "start")  this.dragMode = "moveStart";
       else if (cell.type === "target") this.dragMode = "moveTarget";
-      else if (cell.type === "wall")   { this.dragMode = "erase";  cell.type = "empty"; }
-      else                             { this.dragMode = "wall";   cell.type = "wall";  }
+      else if (cell.type === "wall")   { this.dragMode = "erase";  cell.type = "empty"; cell.terrain = "empty"; }
+      else                             { this.dragMode = "wall";   cell.type = "wall";  cell.terrain = "empty"; }
       this.render();
     });
 
@@ -99,8 +99,8 @@ class GridRenderer {
         this.engine.targetCell = { row: pos.row, col: pos.col };
         cell.type = "target";
       }
-      else if (this.dragMode === "wall"  && cell.type === "empty") cell.type = "wall";
-      else if (this.dragMode === "erase" && cell.type === "wall")  cell.type = "empty";
+      else if (this.dragMode === "wall"  && cell.type !== "start" && cell.type !== "target" && cell.type !== "wall") { cell.type = "wall"; cell.terrain = "empty"; }
+      else if (this.dragMode === "erase" && cell.type === "wall")  { cell.type = "empty"; cell.terrain = "empty"; }
       this.render();
     });
 
@@ -113,6 +113,7 @@ class GridRenderer {
   /**
    * Full canvas redraw. Iterates cells row-major: background fill, then a
    * 1px inset border (subtle grid lines), then S/T glyphs for start/target.
+   * Terrain fills are applied first so visiting/visited/path overlays show on top.
    */
   render() {
     if (!this.engine || !this.ctx) return;
@@ -128,13 +129,24 @@ class GridRenderer {
         const x = c * cellW;
         const y = r * cellH;
 
-        // Cell fill based on type. +/-1 inset on fillRect keeps grid lines visible.
+        // Base terrain fill (drawn first so overlays appear on top)
+        const terrain = cell.terrain || "empty";
+        if (terrain === "grass")      this.ctx.fillStyle = "rgba(34,197,94,0.12)";
+        else if (terrain === "sand") this.ctx.fillStyle = "rgba(250,204,21,0.16)";
+        else if (terrain === "mud")  this.ctx.fillStyle = "rgba(146,64,14,0.22)";
+        else                          this.ctx.fillStyle = "transparent";
+        this.ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+
+        // Overlay fill (walls, start/target, algorithm states)
         if      (cell.type === "wall")     this.ctx.fillStyle = "#1e293b";
-        else if (cell.type === "start")    this.ctx.fillStyle = "rgba(16, 185, 129, 0.3)";
-        else if (cell.type === "target")   this.ctx.fillStyle = "rgba(251, 113, 133, 0.3)";
+        else if (cell.type === "start")    this.ctx.fillStyle = "rgba(16, 185, 129, 0.35)";
+        else if (cell.type === "target")   this.ctx.fillStyle = "rgba(251, 113, 133, 0.35)";
         else if (cell.type === "visiting") this.ctx.fillStyle = "#f59e0b";
-        else if (cell.type === "visited")  this.ctx.fillStyle = "rgba(6, 182, 212, 0.4)";
+        else if (cell.type === "visited")  this.ctx.fillStyle = "rgba(6, 182, 212, 0.45)";
         else if (cell.type === "path")     this.ctx.fillStyle = "#10b981";
+        else if (cell.type === "grass")    this.ctx.fillStyle = "rgba(34,197,94,0.20)";
+        else if (cell.type === "sand")     this.ctx.fillStyle = "rgba(250,204,21,0.26)";
+        else if (cell.type === "mud")      this.ctx.fillStyle = "rgba(146,64,14,0.32)";
         else                               this.ctx.fillStyle = "transparent";
 
         this.ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
@@ -157,6 +169,13 @@ class GridRenderer {
           this.ctx.textAlign    = "center";
           this.ctx.textBaseline = "middle";
           this.ctx.fillText("T", x + cellW / 2, y + cellH / 2);
+        } else if (terrain === "grass" || terrain === "sand" || terrain === "mud") {
+          this.ctx.fillStyle    = "rgba(255,255,255,0.55)";
+          this.ctx.font         = "10px sans-serif";
+          this.ctx.textAlign    = "center";
+          this.ctx.textBaseline = "middle";
+          const label = terrain === "grass" ? "·2" : terrain === "sand" ? "·4" : "·8";
+          this.ctx.fillText(label, x + cellW / 2, y + cellH / 2);
         }
       }
     }

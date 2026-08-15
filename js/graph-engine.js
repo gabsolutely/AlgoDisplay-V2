@@ -24,6 +24,13 @@ class GraphEngine {
     this.grid = [];                   // 2D array of cell objects
     this.startCell = { row: 7, col: 4 };
     this.targetCell = { row: 7, col: 20 };
+    // Terrain weights for meaningful Dijkstra / A* demonstration
+    this.terrainWeights = {
+      empty: 1,
+      grass: 2,
+      sand:  4,
+      mud:   8
+    };
   }
 
   // ================================================================
@@ -217,33 +224,48 @@ class GraphEngine {
     }
 
     // ---- Default / random preset: circular placement + probabilistic edges ----
-    const count = Math.max(4, Math.min(15, nodeCount));
+    // More nodes + start/target on opposite sides + biased weights so weighted
+    // algorithms (Dijkstra, A*) don't just look like BFS.
+    const count = Math.max(8, Math.min(14, nodeCount));
     const centerX = width / 2;
     const centerY = height / 2;
     const radius = Math.min(width, height) / 2 - padding;
 
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * 2 * Math.PI - Math.PI / 2;   // start at 12 o'clock
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
+      const jitterR = 0.82 + Math.random() * 0.32;              // slight radius jitter → non-circular
+      const jitterA = (Math.random() - 0.5) * 0.12;             // slight angle jitter
+      const x = centerX + radius * jitterR * Math.cos(angle + jitterA);
+      const y = centerY + radius * jitterR * Math.sin(angle + jitterA);
       this.addNode(Math.round(x), Math.round(y), String.fromCharCode(65 + (i % 26)));
     }
 
-    // Guarantee connectedness via a ring, then add chords based on density.
+    // Guarantee connectedness via a ring (with larger random weight range so
+    // the shortest path isn't trivially the ring direction).
     for (let i = 0; i < count; i++) {
       const next = (i + 1) % count;
-      const w1 = Math.floor(Math.random() * 9) + 1;
-      this.addEdge(i, next, w1);
+      const ringW = Math.floor(Math.random() * 14) + 3;          // 3..16
+      this.addEdge(i, next, ringW);
+    }
 
+    // Chord edges: denser at short distances (8..15%), some long-range chords
+    // with larger weights so Dijkstra has to choose between fast-short and slow-long.
+    for (let i = 0; i < count; i++) {
       for (let j = i + 2; j < count; j++) {
-        if (i === 0 && j === count - 1) continue;   // already connected via ring
-        if (Math.random() < density) {
-          const w = Math.floor(Math.random() * 9) + 1;
+        if (i === 0 && j === count - 1) continue;                // ring already covers
+        const dist = Math.min(j - i, count - (j - i));
+        const p = dist <= 2 ? 0.55 : dist <= 4 ? 0.22 : 0.08;
+        if (Math.random() < p) {
+          // Biased weight: short chords = light/cheap, long chords = heavy/expensive
+          const baseW = 2 + dist * 2;
+          const w = baseW + Math.floor(Math.random() * 8);
           this.addEdge(i, j, w);
         }
       }
     }
 
+    // Start at 12 o'clock (node 0), target opposite side so paths are long
+    // enough that BFS / Dijkstra / A* meaningfully differ.
     this.startNodeId = 0;
     this.targetNodeId = Math.floor(count / 2);
     this.resetGraphState();
@@ -256,23 +278,37 @@ class GraphEngine {
   /**
    * Allocate a fresh rows × cols cell grid.
    * Each cell carries per-run algorithm state (distance, A* g/f scores, parent pointer).
+   * When `features` is true, scatters random walls + terrain patches so Dijkstra/A*
+   * actually have something meaningful to optimize against (instead of an empty field).
    */
-  initGrid(rows = 15, cols = 25) {
+  initGrid(rows = 15, cols = 25, features = true) {
     this.gridRows = rows;
     this.gridCols = cols;
     this.grid = [];
+
+    // Clamp start/target inside the grid if they somehow exceed dims.
+    this.startCell  = {
+      row: Math.min(this.startCell.row, rows - 2),
+      col: Math.min(this.startCell.col, Math.floor(cols / 3))
+    };
+    this.targetCell = {
+      row: Math.min(this.targetCell.row, rows - 2),
+      col: Math.min(this.targetCell.col, cols - 2)
+    };
 
     for (let r = 0; r < rows; r++) {
       const rowArr = [];
       for (let c = 0; c < cols; c++) {
         let type = "empty";
+        let terrain = "empty";
         if (r === this.startCell.row && c === this.startCell.col) type = "start";
         else if (r === this.targetCell.row && c === this.targetCell.col) type = "target";
 
         rowArr.push({
           row: r,
           col: c,
-          type: type,                 // empty | wall | start | target | visiting | visited | path
+          type: type,                 // empty | wall | start | target | visiting | visited | path | grass | sand | mud
+          terrain: terrain,           // empty | grass | sand | mud  (logical terrain, independent of visit overlay)
           distance: (r === this.startCell.row && c === this.startCell.col) ? 0 : Infinity,
           gScore:   (r === this.startCell.row && c === this.startCell.col) ? 0 : Infinity,
           fScore:   (r === this.startCell.row && c === this.startCell.col) ? 0 : Infinity,
@@ -281,15 +317,86 @@ class GraphEngine {
       }
       this.grid.push(rowArr);
     }
+
+    if (!features) return;
+
+    // --- Scatter random wall clusters ---
+    const wallDensity = 0.22;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = this.grid[r][c];
+        if (cell.type === "start" || cell.type === "target") continue;
+        if (Math.random() < wallDensity) {
+          cell.type = "wall";
+          // Occasionally grow a small wall cluster.
+          if (Math.random() < 0.45) {
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+            const [dr, dc] = dirs[Math.floor(Math.random() * 4)];
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+              const nb = this.grid[nr][nc];
+              if (nb.type !== "start" && nb.type !== "target") nb.type = "wall";
+            }
+          }
+        }
+      }
+    }
+
+    // Carve guaranteed horizontal+vertical corridors so start → target is always reachable
+    const sr = this.startCell.row, sc = this.startCell.col;
+    const tr = this.targetCell.row, tc = this.targetCell.col;
+    for (let c = Math.min(sc, tc); c <= Math.max(sc, tc); c++) {
+      if (this.grid[sr][c].type !== "start" && this.grid[sr][c].type !== "target") {
+        this.grid[sr][c].type = "empty";
+      }
+    }
+    for (let r = Math.min(sr, tr); r <= Math.max(sr, tr); r++) {
+      if (this.grid[r][tc].type !== "start" && this.grid[r][tc].type !== "target") {
+        this.grid[r][tc].type = "empty";
+      }
+    }
+
+    // --- Scatter terrain patches (grass / sand / mud) with different costs ---
+    const terrainPatches = [
+      { terrain: "grass", count: 4, size: 10, chance: 0.8 },
+      { terrain: "sand",  count: 3, size: 8,  chance: 0.75 },
+      { terrain: "mud",   count: 2, size: 6,  chance: 0.7 }
+    ];
+    terrainPatches.forEach(patch => {
+      for (let i = 0; i < patch.count; i++) {
+        const seedR = Math.floor(Math.random() * rows);
+        const seedC = Math.floor(Math.random() * cols);
+        const stack = [{ r: seedR, c: seedC }];
+        const visited = new Set([`${seedR},${seedC}`]);
+        let placed = 0;
+        while (stack.length > 0 && placed < patch.size) {
+          const cur = stack.pop();
+          const cell = this.grid[cur.r]?.[cur.c];
+          if (!cell || cell.type === "start" || cell.type === "target" || cell.type === "wall") continue;
+          cell.terrain = patch.terrain;
+          placed++;
+          [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc]) => {
+            const nr = cur.r + dr, nc = cur.c + dc;
+            const k = `${nr},${nc}`;
+            if (!visited.has(k) && Math.random() < patch.chance) {
+              visited.add(k);
+              stack.push({ r: nr, c: nc });
+            }
+          });
+        }
+      }
+    });
+
+    this.resetGridState();
   }
 
-  /** Reset pathfinding state WITHOUT erasing walls. */
+  /** Reset pathfinding state WITHOUT erasing walls or terrain. */
   resetGridState() {
     for (let r = 0; r < this.gridRows; r++) {
       for (let c = 0; c < this.gridCols; c++) {
         const cell = this.grid[r][c];
         if (cell.type !== "wall" && cell.type !== "start" && cell.type !== "target") {
-          cell.type = "empty";
+          cell.type = cell.terrain && cell.terrain !== "empty" ? cell.terrain : "empty";
         }
         const isStart = (r === this.startCell.row && c === this.startCell.col);
         cell.distance = isStart ? 0 : Infinity;
