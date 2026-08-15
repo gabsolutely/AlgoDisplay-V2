@@ -2823,7 +2823,7 @@ async def search(arr, target):
         <span class="complexity-title">📊 Complexity Monitor</span>
         <button class="complexity-close" title="Close">✕</button>
       </div>
-      <canvas id="complexity-canvas" width="360" height="220"></canvas>
+      <canvas id="complexity-canvas" width="300" height="240"></canvas>
       <div class="complexity-legend" id="complexity-legend"></div>
     `;
     
@@ -2880,8 +2880,8 @@ async def search(arr, target):
     if (!this.complexityDataB) this.complexityDataB = [];
     const canvas = this.complexityCanvas;
     const isRace = !!this.raceMode;
-    const baseW = isRace ? 420 : 360;
-    const baseH = 220;
+    const baseW = isRace ? 340 : 300;
+    const baseH = 240;
 
     // HiDPI / devicePixelRatio scaling
     const dpr = window.devicePixelRatio || 1;
@@ -3038,18 +3038,26 @@ async def search(arr, target):
     const legend = document.getElementById('complexity-legend');
     if (legend) {
       const algoName = this.elements.algorithmSelect?.selectedOptions?.[0]?.textContent || this.currentAlgorithm;
+
+      // Row 1: dashed "Theory" indicators
       let html = `<div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;">`;
-      html += `<span class="legend-item"><span class="legend-dot" style="background: ${accent}"></span>${algoName} <span style="opacity:.55">(${complexityA.avg})</span></span>`;
-      html += `<span class="legend-item"><span class="legend-line-dashed" style="border-top-color: ${accent}99"></span>Theory</span>`;
+      html += `<span class="legend-item"><span class="legend-line-dashed" style="border-top-color: ${accent}99"></span>Theory A</span>`;
       if (isRace) {
-        const algoBName = this.elements.algorithmSelectB?.selectedOptions?.[0]?.textContent || this.currentAlgorithmB;
-        const cxB = complexityB ? complexityB.avg : '?';
-        html += `<span class="legend-item"><span class="legend-dot" style="background: ${colorB}"></span>${algoBName} <span style="opacity:.55">(${cxB})</span></span>`;
         html += `<span class="legend-item"><span class="legend-line-dashed" style="border-top-color: ${colorB}99"></span>Theory B</span>`;
       }
       html += `</div>`;
 
-      // Stats summary line - shows EXACTLY what's on the stats card, so user sees consistency
+      // Row 2: algo name + complexity chips
+      html += `<div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:4px;">`;
+      html += `<span class="legend-item"><span class="legend-dot" style="background: ${accent}"></span>${algoName} <span style="opacity:.55">(${complexityA.avg})</span></span>`;
+      if (isRace) {
+        const algoBName = this.elements.algorithmSelectB?.selectedOptions?.[0]?.textContent || this.currentAlgorithmB;
+        const cxB = complexityB ? complexityB.avg : '?';
+        html += `<span class="legend-item"><span class="legend-dot" style="background: ${colorB}"></span>${algoBName} <span style="opacity:.55">(${cxB})</span></span>`;
+      }
+      html += `</div>`;
+
+      // Stats summary line
       html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.08);display:flex;flex-wrap:wrap;gap:6px 14px;font-size:10.5px;">`;
       if (isRace) {
         const stepsA = this.stats.steps, compsA = this.stats.comparisons, swapsA = this.stats.swaps;
