@@ -259,14 +259,14 @@ window.utils = {
   },
 
   /**
-   * Small styled console logger — wraps messages with emoji + CSS color.
+   * Small styled console logger — wraps messages with prefix + CSS color.
    * Intended for human-facing dev feedback, not structured logging.
    */
   logger: {
-    info:    function(msg) { console.log(`%cℹ️ ${msg}`, 'color: #17a2b8; font-weight: bold;'); },
-    success: function(msg) { console.log(`%c✅ ${msg}`, 'color: #28a745; font-weight: bold;'); },
-    error:   function(msg) { console.log(`%c❌ ${msg}`, 'color: #dc3545; font-weight: bold;'); },
-    warn:    function(msg) { console.log(`%c⚠️ ${msg}`, 'color: #ffc107; font-weight: bold;'); }
+    info:    function(msg) { console.log(`%c[INFO] ${msg}`, 'color: #17a2b8; font-weight: bold;'); },
+    success: function(msg) { console.log(`%c[OK]   ${msg}`, 'color: #28a745; font-weight: bold;'); },
+    error:   function(msg) { console.log(`%c[ERR]  ${msg}`, 'color: #dc3545; font-weight: bold;'); },
+    warn:    function(msg) { console.log(`%c[WARN] ${msg}`, 'color: #ffc107; font-weight: bold;'); }
   }
 };
 

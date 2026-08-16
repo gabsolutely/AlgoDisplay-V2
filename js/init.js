@@ -19,10 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 500ms is conservative but ensures no race with browser layout.
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    console.log("✅ AlgoDisplay initialized successfully!");
+    console.log("[OK] AlgoDisplay initialized successfully!");
 
   } catch (error) {
-    console.error("❌ Failed to initialize application:", error);
+    console.error("[ERR] Failed to initialize application:", error);
 
     // Render a friendly (and debuggable) error surface instead of a blank UI.
     const container = document.getElementById("visualizer");

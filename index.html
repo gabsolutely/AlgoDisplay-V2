@@ -61,7 +61,7 @@
                 <div class="editor-controls">
                     <!-- Toolbar Card 1: Code & Data (category, language, algo, preset, size, graph/grid) -->
                     <div class="toolbar-card">
-                        <div class="card-title">⚙️ Code & Data</div>
+                        <div class="card-title">Code &amp; Data</div>
                         <div class="card-controls">
                             <div class="control-group">
                                 <label for="category-select">Category:</label>
@@ -152,7 +152,7 @@
 
                     <!-- Toolbar Card 2: Sound Studio (SFX on/off, musical mode, kits, waveform, scale, octave, volume, jam) -->
                     <div class="toolbar-card">
-                        <div class="card-title">🎵 Sound Studio</div>
+                        <div class="card-title">Sound Studio</div>
                         <div class="card-controls">
                             <div class="control-group">
                                 <label for="sound-toggle" class="toggle-label">
@@ -172,12 +172,12 @@
                                 <label for="producer-kit-select">Kit:</label>
                                 <select id="producer-kit-select" class="btn btn-primary">
                                     <option value="default">Default</option>
-                                    <option value="chiptune">👾 8-Bit</option>
-                                    <option value="lofi">🎷 Lo-Fi</option>
-                                    <option value="marimba">🌴 Marimba</option>
-                                    <option value="synthwave">🌌 Synthwave</option>
-                                    <option value="scifi">📻 Sci-Fi</option>
-                                    <option value="organ">🎹 Organ</option>
+                                    <option value="chiptune">8-Bit</option>
+                                    <option value="lofi">Lo-Fi</option>
+                                    <option value="marimba">Marimba</option>
+                                    <option value="synthwave">Synthwave</option>
+                                    <option value="scifi">Sci-Fi</option>
+                                    <option value="organ">Organ</option>
                                 </select>
                             </div>
                             <div class="control-group">
@@ -218,13 +218,13 @@
                                 <label for="volume-range">Vol: <span id="volume-val">60%</span></label>
                                 <input type="range" id="volume-range" min="0" max="100" value="60" style="width:75px;">
                             </div>
-                            <button id="producer-jam-btn" class="btn btn-warning" title="Audition Sound">🎵 Jam</button>
+                            <button id="producer-jam-btn" class="btn btn-warning" title="Audition Sound">Jam</button>
                         </div>
                     </div>
 
                     <!-- Toolbar Card 3: Race & View Options (race mode, vs algorithm B, theme, colorblind, share, complexity, help) -->
                     <div class="toolbar-card">
-                        <div class="card-title">🏎️ Mode & View</div>
+                        <div class="card-title">Mode &amp; View</div>
                         <div class="card-controls">
                             <div class="control-group">
                                 <label for="race-toggle" class="toggle-label">
@@ -262,8 +262,8 @@
                                     Colorblind
                                 </label>
                             </div>
-                            <button id="share-btn" class="btn btn-info" title="Copy shareable URL">🔗 Share</button>
-                            <button id="complexity-btn" class="btn btn-secondary" title="Toggle Complexity Overlay">📊</button>
+                            <button id="share-btn" class="btn btn-info" title="Copy shareable URL">Share</button>
+                            <button id="complexity-btn" class="btn btn-secondary" title="Toggle Complexity Overlay">Cx</button>
                             <button id="help-btn" class="btn btn-secondary" title="Help">?</button>
                         </div>
                     </div>
@@ -272,15 +272,15 @@
                 <!-- Editor Card 4: Code Editor (hidden by default) -->
                 <div class="editor-container">
                     <div class="editor-header-bar">
-                        <span>💻 Code Editor</span>
-                        <button id="editor-expand-btn" class="btn-action" title="Toggle Code Editor Height">↕️ Expand Editor</button>
+                        <span>Code Editor</span>
+                        <button id="editor-expand-btn" class="btn-action" title="Toggle Code Editor Height">Expand Editor</button>
                     </div>
                     <div class="editor-workspace">
                         <textarea id="code-editor" class="code-editor" placeholder="Write your algorithm here..."></textarea>
                     </div>
                 </div>
                 <div id="help-panel" class="help-panel" style="display: none;">
-                    <h3>📝 How to Write Your Own Algorithms</h3>
+                    <h3>How to Write Your Own Algorithms</h3>
                     
                     <div class="help-section">
                         <h4>JavaScript</h4>
@@ -319,10 +319,10 @@ for (let i = 0; i < arr.length - 1; i++) {
                     
                     <div class="help-colors">
                         <h4>Color Guide:</h4>
-                        <div class="color-item">🔵 Blue - Normal</div>
-                        <div class="color-item">🔴 Red - Comparing</div>
-                        <div class="color-item">🟠 Orange - Swapping</div>
-                        <div class="color-item">🟢 Green - Sorted / Found</div>
+                        <div class="color-item">[B] Blue - Normal</div>
+                        <div class="color-item">[R] Red - Comparing</div>
+                        <div class="color-item">[O] Orange - Swapping</div>
+                        <div class="color-item">[G] Green - Sorted / Found</div>
                     </div>
                 </div>
             </section>
@@ -332,15 +332,15 @@ for (let i = 0; i < arr.length - 1; i++) {
                 <div class="control-buttons">
                     <button id="gen-btn" class="btn btn-primary">Generate Array</button>
                 <div class="control-group grid-only" style="display:none;">
-                    <button id="maze-gen-btn" class="btn btn-warning" title="Generate Maze">⚡ Maze</button>
-                    <button id="clear-walls-btn" class="btn btn-secondary" title="Clear Walls">🧹 Clear Walls</button>
+                    <button id="maze-gen-btn" class="btn btn-warning" title="Generate Maze">Maze</button>
+                    <button id="clear-walls-btn" class="btn btn-secondary" title="Clear Walls">Clear Walls</button>
                 </div>
                     <button id="run-btn" class="btn btn-success">Run</button>
                     <button id="pause-btn" class="btn btn-warning" style="display:none;">Pause</button>
                     <button id="resume-btn" class="btn btn-info" style="display:none;">Resume</button>
                     <button id="step-btn" class="btn btn-secondary">Step Mode</button>
-                    <button id="step-back-btn" class="btn btn-secondary" style="display:none;" title="Step Backward">⬅️ Step Back</button>
-                    <button id="step-forward-btn" class="btn btn-secondary" style="display:none;" title="Step Forward">Step Forward ➡️</button>
+                    <button id="step-back-btn" class="btn btn-secondary" style="display:none;" title="Step Backward">Step Back</button>
+                    <button id="step-forward-btn" class="btn btn-secondary" style="display:none;" title="Step Forward">Step Forward</button>
                     <button id="clear-btn" class="btn btn-danger">Clear</button>
                 </div>
                 
@@ -364,14 +364,14 @@ for (let i = 0; i < arr.length - 1; i++) {
                 <div id="pseudocode-container-wrapper" class="pseudocode-container-wrapper">
                     <div id="pseudocode-panel" class="pseudocode-panel">
                         <div class="pseudocode-header">
-                            <span>📖 Canonical Pseudocode (A)</span>
+                            <span>Pseudocode (A)</span>
                             <span id="pseudocode-algo-title" class="pseudocode-algo-title">Bubble Sort</span>
                         </div>
                         <div id="pseudocode-body" class="pseudocode-body"></div>
                     </div>
                     <div id="pseudocode-panel-b" class="pseudocode-panel pseudocode-panel-b" style="display:none;">
                         <div class="pseudocode-header">
-                            <span>🏎️ Pseudocode (B)</span>
+                            <span>Pseudocode (B)</span>
                             <span id="pseudocode-algo-title-b" class="pseudocode-algo-title">Bubble Sort</span>
                         </div>
                         <div id="pseudocode-body-b" class="pseudocode-body"></div>

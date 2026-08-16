@@ -172,7 +172,7 @@ class AlgorithmVisualizer {
       this.setExampleCode();                        // Populate code editor with built-in algo template
       this.generateArray();                         // Create first dataset (or graph/grid layout)
     }
-    this.initComplexityOverlay();                   // Create complexity chart DOM (hidden until user clicks 📊)
+    this.initComplexityOverlay();                   // Create complexity chart DOM (hidden until user clicks complexity button)
 
     console.log("AlgoDisplay ready");
   }
@@ -208,7 +208,7 @@ class AlgorithmVisualizer {
       this.elements.helpBtn.onclick = () => {
         const isVisible = this.elements.helpPanel.style.display !== "none";
         this.elements.helpPanel.style.display = isVisible ? "none" : "block";
-        this.elements.helpBtn.textContent = isVisible ? "?" : "✕";
+        this.elements.helpBtn.textContent = isVisible ? "?" : "X";
         this.elements.helpBtn.classList.toggle("btn-danger");
         this.elements.helpBtn.classList.toggle("btn-secondary");
       };
@@ -249,14 +249,14 @@ class AlgorithmVisualizer {
       this.elements.mazeGenBtn.onclick = () => {
         this.graphEngine.generateRecursiveMaze();
         this.gridRenderer.render();
-        this.log("⚡ Generated Recursive Backtracking Maze!");
+        this.log("Generated Recursive Backtracking Maze.");
       };
     }
     if (this.elements.clearWallsBtn) {
       this.elements.clearWallsBtn.onclick = () => {
         this.graphEngine.clearGridWalls();
         this.gridRenderer.render();
-        this.log("🧹 Cleared all grid walls.");
+        this.log("Cleared all grid walls.");
       };
     }
 
@@ -492,7 +492,7 @@ class AlgorithmVisualizer {
     if (this.elements.editorExpandBtn) {
       this.elements.editorExpandBtn.onclick = () => {
         const isExpanded = this.elements.editor.classList.toggle('expanded');
-        this.elements.editorExpandBtn.textContent = isExpanded ? "⏬ Collapse Editor" : "↕️ Expand Editor";
+        this.elements.editorExpandBtn.textContent = isExpanded ? "[-] Collapse Editor" : "[+] Expand Editor";
       };
     }
   }
@@ -530,11 +530,11 @@ class AlgorithmVisualizer {
     // Update generate button text based on category
     if (this.elements.generateBtn) {
       if (isGraph) {
-        this.elements.generateBtn.textContent = "⚡ Generate Graph / Tree";
+        this.elements.generateBtn.textContent = "[GEN] Generate Graph / Tree";
       } else if (isGrid) {
-        this.elements.generateBtn.textContent = "⚡ Generate Grid";
+        this.elements.generateBtn.textContent = "[GEN] Generate Grid";
       } else {
-        this.elements.generateBtn.textContent = "⚡ Generate Array";
+        this.elements.generateBtn.textContent = "[GEN] Generate Array";
       }
     }
 
@@ -1742,7 +1742,7 @@ async def search(arr, target):
       this.history = [];
       this.future = [];
       this.saveSnapshot("init_graph");
-      this.log(`⚡ Generated new ${gPreset.toUpperCase()} structure`);
+      this.log(`Generated new ${gPreset.toUpperCase()} structure`);
       this.sounds.play('generate');
       return;
     } else if (this.currentCategory === "grid") {
@@ -1768,7 +1768,7 @@ async def search(arr, target):
           this.elements.arraySizeInput.value = parsed.length;
         }
       } else {
-        this.log("⚠️ Custom array empty or invalid — falling back to random");
+        this.log("Custom array empty or invalid - falling back to random");
         this.array = this.generatePreset(size, "random");
       }
     } else {
@@ -2047,7 +2047,7 @@ async def search(arr, target):
       this.elements.runBtn.style.display = "none";
       this.elements.pauseBtn.style.display = "inline-block";
       this.elements.resumeBtn.style.display = "none";
-      this.log(`▶️ Continuing from snapshot — replaying ${totalToReplay} operation(s) forward...`);
+      this.log(`Resuming from snapshot - replaying ${totalToReplay} operation(s) forward...`);
       let played = 0;
       try {
         while (this.future.length > 0 && !this.shouldStop) {
@@ -2072,10 +2072,10 @@ async def search(arr, target):
         }
       }
       if (!this.shouldStop) {
-        this.log(`✅ Replayed ${played} step(s) — now exactly where you left off.`);
+        this.log(`Replayed ${played} step(s) - now exactly where you left off.`);
         // If future exhausted itself AND user wants more, clicking Run again does a fresh algorithm run.
       } else {
-        this.log(`⏸️ Replay paused at ${played}/${totalToReplay}.`);
+        this.log(`Replay paused at ${played}/${totalToReplay}.`);
       }
       return;
     }
@@ -2163,7 +2163,7 @@ async def search(arr, target):
 
     if (this.raceMode) {
       const algoNameB = this.elements.algorithmSelectB.options[this.elements.algorithmSelectB.selectedIndex]?.textContent || this.currentAlgorithmB;
-      this.log(`🏁 RACE: ${algoNameA}  vs  ${algoNameB} — same array, may the fastest win!`);
+      this.log(`RACE: ${algoNameA}  vs  ${algoNameB} - same array, may the fastest win!`);
     } else {
       this.log(`Running ${this.currentLanguage} ${modeLabel}...`);
     }
@@ -2912,7 +2912,7 @@ async def search(arr, target):
   shareState() {
     const url = this.encodeState();
     navigator.clipboard.writeText(url).then(() => {
-      this.showToast('🔗 Share URL copied to clipboard!');
+      this.showToast('Share URL copied to clipboard!');
       this.log('Shareable URL copied: ' + url);
     }).catch(() => {
       // Fallback for non-HTTPS
@@ -2922,7 +2922,7 @@ async def search(arr, target):
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      this.showToast('🔗 Share URL copied to clipboard!');
+      this.showToast('Share URL copied to clipboard!');
       this.log('Shareable URL copied: ' + url);
     });
   }
@@ -2937,7 +2937,7 @@ async def search(arr, target):
     overlay.id = 'complexity-overlay';
     overlay.innerHTML = `
       <div class="complexity-header">
-        <span class="complexity-title">📊 Complexity Monitor</span>
+        <span class="complexity-title">Complexity Monitor</span>
         <button class="complexity-close" title="Close">✕</button>
       </div>
       <canvas id="complexity-canvas" width="300" height="240"></canvas>
@@ -3458,7 +3458,7 @@ async def search(arr, target):
   /** Pop one snapshot from history (undo). Aborts live run if active. */
   stepBack() {
     if (this.history.length <= 1) {
-      this.showToast("ℹ️ At starting state — cannot step back further.");
+      this.showToast("At starting state - cannot step back further.");
       return;
     }
 
@@ -3481,13 +3481,13 @@ async def search(arr, target):
     this._applySnapshot(prev);
 
     this.updateStepNavButtons();
-    this.log("⬅️ Stepped back one operation");
+    this.log("Stepped back one operation");
   }
 
   /** Pop one snapshot from future (redo). Aborts live run if active. */
   stepForward() {
     if (this.future.length === 0) {
-      this.showToast("ℹ️ No redo steps available.");
+      this.showToast("[INFO] No redo steps available.");
       return;
     }
     if (this.isRunning) {
@@ -3505,7 +3505,7 @@ async def search(arr, target):
     this._applySnapshot(next);
 
     this.updateStepNavButtons();
-    this.log("➡️ Stepped forward one operation");
+    this.log("Stepped forward one operation");
   }
 
   /** Toggle visibility of Step Back / Forward buttons based on stack depths. */
