@@ -342,8 +342,18 @@ class AlgorithmVisualizer {
     }
 
     // Race mode toggle (dual-algorithm comparison)
+    // Note: Race mode is only supported for sort/search categories.
+    // Graph and grid use shared singleton renderers, so concurrent dual-algo
+    // visualization is not possible without a major renderer refactor.
     if (this.elements.raceToggle) {
       this.elements.raceToggle.onchange = () => {
+        const cat = this.currentCategory;
+        // Block race mode for graph and grid categories
+        if (this.elements.raceToggle.checked && (cat === "graph" || cat === "grid")) {
+          this.elements.raceToggle.checked = false;
+          this.log("Race mode is not available for Graph / Grid categories (shared renderer).");
+          return;
+        }
         this.raceMode = this.elements.raceToggle.checked;
         // Show/hide side B visualization and stats
         if (this.elements.vizSideB) {
@@ -499,9 +509,31 @@ class AlgorithmVisualizer {
 
   // ── Category & Algorithm Management ───────────────────────────────────
   onCategoryChange() {
+    // Always sync this.currentCategory from the DOM first so every subsequent
+    // call (refreshAlgorithmOptions, setExampleCode, renderPseudocode) sees
+    // the correct category before any rendering happens.
+    this.currentCategory = this.elements.categorySelect.value;
+
     const isSearch = this.currentCategory === "search";
-    const isGraph = this.currentCategory === "graph";
-    const isGrid = this.currentCategory === "grid";
+    const isGraph  = this.currentCategory === "graph";
+    const isGrid   = this.currentCategory === "grid";
+
+    // ── Bug 1: Auto-disable race mode when switching to graph/grid ─────────
+    // Graph and grid share singleton renderers — concurrent dual-algo
+    // visualization would corrupt shared engine state.
+    if ((isGraph || isGrid) && this.raceMode) {
+      this.raceMode = false;
+      if (this.elements.raceToggle) this.elements.raceToggle.checked = false;
+      if (this.elements.vizSideB) this.elements.vizSideB.style.display = "none";
+      if (this.elements.vizWrapper) this.elements.vizWrapper.classList.remove("race-mode");
+      if (this.elements.statsCardB) this.elements.statsCardB.style.display = "none";
+      if (this.elements.raceOnlyGroups) this.elements.raceOnlyGroups.forEach(el => el.style.display = "none");
+      this.log("Race mode disabled — not supported for Graph / Grid categories.");
+    }
+
+    // ── Hide race toggle for graph/grid; show it again for sort/search ─────
+    const raceControl = this.elements.raceToggle?.closest(".control-group");
+    if (raceControl) raceControl.style.display = (isGraph || isGrid) ? "none" : "";
 
     // Disable Python for Graph & Grid modes
     if (this.elements.languageSelect) {
@@ -538,6 +570,14 @@ class AlgorithmVisualizer {
       }
     }
 
+    // ── Bug 2: Refresh algorithm dropdowns BEFORE generating data ──────────
+    // generateArray() doesn't depend on the algorithm for graph/grid, but
+    // setExampleCode() → renderPseudocode() does.  Doing options first means
+    // this.currentAlgorithm is already set to the new category's first algo
+    // before any pseudocode rendering occurs.
+    this.refreshAlgorithmOptions();
+    this.refreshAlgorithmSelectB();
+
     // Initialize appropriate renderer for category and generate
     if (this.currentCategory === "sort" || this.currentCategory === "search") {
       this.renderer = new ArrayRenderer();
@@ -545,9 +585,7 @@ class AlgorithmVisualizer {
     }
     this.generateArray();
 
-    this.refreshAlgorithmOptions();
-    this.refreshAlgorithmSelectB();
-    this.setExampleCode();
+    this.setExampleCode();   // calls renderPseudocode(this.currentAlgorithm) internally
 
     if (this.raceMode) {
       if (this.elements.vizSideB) this.elements.vizSideB.style.display = "";

@@ -151,20 +151,44 @@ class GraphEngine {
 
     // ---- Binary Tree preset: recursive split placement ----
     if (presetType === "tree") {
-      const levels = 3;
+      // Randomize depth each generation: 2, 3, or 4 levels (weighted towards 3)
+      const levelWeights = [2, 3, 3, 4];
+      const maxLevel = levelWeights[Math.floor(Math.random() * levelWeights.length)];
+
+      // Vertical spacing scales with depth so deeper trees still fit
+      const ySpacing = maxLevel <= 2 ? 110 : maxLevel === 3 ? 85 : 65;
+
+      // Pool of unique random values (1–99) for node labels
+      const usedVals = new Set();
+      const randVal = () => {
+        let v;
+        do { v = Math.floor(Math.random() * 99) + 1; } while (usedVals.has(v));
+        usedVals.add(v);
+        return v;
+      };
+
       let id = 0;
       const createTreeNode = (level, minX, maxX, y) => {
-        if (level > levels) return null;
+        if (level > maxLevel) return null;
         const x = (minX + maxX) / 2;
         const currId = id++;
-        this.addNode(x, y, `N${currId}`);
-        const leftChild  = createTreeNode(level + 1, minX, x,      y + 80);
-        const rightChild = createTreeNode(level + 1, x,    maxX,   y + 80);
-        // Link to children after they're created.
+        // Node label = random integer value (educational: shows value stored at node)
+        this.addNode(x, y, `${randVal()}`);
+
+        // Randomly skip children on non-root levels to produce unbalanced trees.
+        // Root always gets both children; deeper nodes skip ~40% of the time.
+        const skipLeft  = level > 1 && Math.random() < 0.40;
+        const skipRight = level > 1 && Math.random() < 0.40;
+
+        const leftChild  = skipLeft  ? null : createTreeNode(level + 1, minX, x,    y + ySpacing);
+        const rightChild = skipRight ? null : createTreeNode(level + 1, x,    maxX, y + ySpacing);
+
+        // Link to children with random edge weights.
         if (leftChild  !== null) this.addEdge(currId, leftChild,  Math.floor(Math.random() * 8) + 1);
         if (rightChild !== null) this.addEdge(currId, rightChild, Math.floor(Math.random() * 8) + 1);
         return currId;
       };
+
       createTreeNode(1, padding, width - padding, padding);
       this.startNodeId = 0;
       this.targetNodeId = this.nodes.length - 1;
