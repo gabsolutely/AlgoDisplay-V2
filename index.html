@@ -120,6 +120,18 @@
                                 <label for="array-size">Size:</label>
                                 <input type="number" id="array-size" min="5" max="50" value="20" class="btn" style="width:70px;">
                             </div>
+                            <div class="control-group graph-only" style="display:none;">
+                                <label for="graph-node-count">Nodes:</label>
+                                <input type="number" id="graph-node-count" min="4" max="18" value="8" class="btn" style="width:60px;" title="Number of nodes in the graph">
+                            </div>
+                            <div class="control-group grid-only" style="display:none;">
+                                <label for="grid-size-select">Grid:</label>
+                                <select id="grid-size-select" class="btn btn-primary">
+                                    <option value="10x18">Small (10×18)</option>
+                                    <option value="15x25" selected>Medium (15×25)</option>
+                                    <option value="20x35">Large (20×35)</option>
+                                </select>
+                            </div>
                             <div class="control-group search-only" style="display:none;">
                                 <label for="target-input">Target:</label>
                                 <input type="number" id="target-input" value="50" class="btn" style="width:70px;">
@@ -280,49 +292,162 @@
                     </div>
                 </div>
                 <div id="help-panel" class="help-panel" style="display: none;">
-                    <h3>How to Write Your Own Algorithms</h3>
-                    
-                    <div class="help-section">
-                        <h4>JavaScript</h4>
-                        <pre><code>// Use these functions:
-await compare(i, j)      // Red glow - compares elements
-await swap(arr, i, j)    // Orange glow - swaps elements
-await renderArray(arr)   // Updates display
-await markFound(index)   // Green glow - match found!
-log("message")           // Shows in log</code></pre>
+                    <div class="help-tabs">
+                        <button class="help-tab active" data-tab="sort-search">Sort / Search</button>
+                        <button class="help-tab" data-tab="graph">Graph</button>
+                        <button class="help-tab" data-tab="grid">Grid / Maze</button>
+                        <button class="help-tab" data-tab="colors">Colors</button>
                     </div>
-                    
-                    <div class="help-section">
-                        <h4>Python</h4>
-                        <pre><code># Must define this function:
-async def sort(arr):
-    # Use these functions:
-    await compare(i, j)       # Red glow
-    await swap(arr, i, j)     # Orange glow
-    await render_array(arr)   # Updates display
-    await mark_found(index)   # Green glow - match!
-    log("message")            # Shows in log</code></pre>
-                    </div>
-                    
-                    <div class="help-section">
-                        <h4>Example: Bubble Sort</h4>
-                        <pre><code>// JavaScript
-for (let i = 0; i < arr.length - 1; i++) {
-  for (let j = 0; j < arr.length - i - 1; j++) {
+
+                    <!-- Sort / Search Tab -->
+                    <div id="help-tab-sort-search" class="help-tab-content">
+                        <div class="help-section">
+                            <h4>JavaScript API (Sort &amp; Search)</h4>
+                            <pre><code>await compare(i, j)      // Compare arr[i] vs arr[j] — red glow
+await swap(arr, i, j)    // Swap arr[i] ↔ arr[j] — orange glow
+await renderArray(arr)   // Re-render the bar chart
+await markFound(index)   // Mark element as found — green pulse
+await sleep(ms)          // Manual delay
+log("message")           // Append to execution log</code></pre>
+                        </div>
+                        <div class="help-section">
+                            <h4>Python API (Sort &amp; Search only)</h4>
+                            <div class="help-note">⚠️ Python is only available for Sorting and Searching categories.</div>
+                            <pre><code>async def sort(arr):          # Must use this signature for Sort
+async def search(arr, target): # Must use this signature for Search
+
+await compare(i, j)       # Compare — red glow
+await swap(arr, i, j)     # Swap — orange glow
+await render_array(arr)   # Re-render
+await mark_found(index)   # Found — green pulse
+log("message")            # Execution log</code></pre>
+                        </div>
+                        <div class="help-section">
+                            <h4>Example: Bubble Sort (JS)</h4>
+                            <pre><code>for (let i = 0; i &lt; arr.length - 1; i++) {
+  for (let j = 0; j &lt; arr.length - i - 1; j++) {
     await compare(j, j + 1);
-    if (arr[j] > arr[j + 1]) {
+    if (arr[j] &gt; arr[j + 1]) {
       await swap(arr, j, j + 1);
     }
   }
 }</code></pre>
+                        </div>
                     </div>
-                    
-                    <div class="help-colors">
-                        <h4>Color Guide:</h4>
-                        <div class="color-item">[B] Blue - Normal</div>
-                        <div class="color-item">[R] Red - Comparing</div>
-                        <div class="color-item">[O] Orange - Swapping</div>
-                        <div class="color-item">[G] Green - Sorted / Found</div>
+
+                    <!-- Graph Tab -->
+                    <div id="help-tab-graph" class="help-tab-content" style="display:none;">
+                        <div class="help-section">
+                            <h4>Graph API (JavaScript only)</h4>
+                            <div class="help-note">⚠️ Graph algorithms only support JavaScript.</div>
+                            <pre><code>const nodes = getNodes()         // [ {id, label, x, y, status} ]
+const start = getStartNode()     // Green node
+const target = getTargetNode()   // Red node
+const nbrs = getNeighbors(id)    // [ {id, weight} ] outgoing edges
+
+await visitNode(id, "visiting")  // Highlight node — orange
+await visitNode(id, "visited")   // Mark visited — teal
+await visitEdge(from, to)        // Highlight edge
+await updateDistance(id, d)      // Update distance label
+await markPath([id1, id2, ...])  // Highlight final path — green
+log("message")                   // Execution log</code></pre>
+                        </div>
+                        <div class="help-section">
+                            <h4>Example: BFS</h4>
+                            <pre><code>const start = getStartNode();
+const target = getTargetNode();
+const queue = [start.id];
+const visited = new Set([start.id]);
+const parent = {};
+
+while (queue.length &gt; 0) {
+  const cur = queue.shift();
+  await visitNode(cur, "visiting");
+  if (cur === target.id) {
+    const path = []; let c = cur;
+    while (c !== undefined) { path.unshift(c); c = parent[c]; }
+    await markPath(path); return;
+  }
+  for (const n of getNeighbors(cur)) {
+    if (!visited.has(n.id)) {
+      visited.add(n.id); parent[n.id] = cur;
+      queue.push(n.id);
+    }
+  }
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Grid Tab -->
+                    <div id="help-tab-grid" class="help-tab-content" style="display:none;">
+                        <div class="help-section">
+                            <h4>Grid API (JavaScript only)</h4>
+                            <div class="help-note">⚠️ Grid algorithms only support JavaScript.</div>
+                            <pre><code>const s = getStartCell()          // { row, col }
+const t = getTargetCell()          // { row, col }
+const nbrs = getGridNeighbors(r, c) // [ {row, col, weight, terrain} ]
+  // Filters out walls automatically. Terrain weights:
+  //   empty=1, grass=2, sand=4, mud=8
+
+await visitGridCell(r, c, "visiting")  // Orange highlight
+await visitGridCell(r, c, "path")      // Green path
+log("message")                          // Execution log</code></pre>
+                        </div>
+                        <div class="help-section">
+                            <h4>Example: Grid BFS</h4>
+                            <pre><code>const start = getStartCell();
+const target = getTargetCell();
+const queue = [start];
+const visited = new Set([`${start.row},${start.col}`]);
+const parent = {};
+
+while (queue.length &gt; 0) {
+  const cur = queue.shift();
+  await visitGridCell(cur.row, cur.col, "visiting");
+  if (cur.row === target.row &amp;&amp; cur.col === target.col) {
+    let p = cur;
+    while (p) {
+      await visitGridCell(p.row, p.col, "path");
+      p = parent[`${p.row},${p.col}`];
+    }
+    return;
+  }
+  for (const n of getGridNeighbors(cur.row, cur.col)) {
+    const k = `${n.row},${n.col}`;
+    if (!visited.has(k)) {
+      visited.add(k); parent[k] = cur;
+      queue.push(n);
+    }
+  }
+}</code></pre>
+                        </div>
+                        <div class="help-section">
+                            <h4>Grid Tips</h4>
+                            <pre><code>// Click/drag to draw walls
+// Drag the S (start) or T (target) to reposition them
+// Use 🌀 Maze to generate a recursive backtracking maze
+// Use Clear Walls to erase all walls
+// Grid size: Small / Medium / Large in the toolbar</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Colors Tab -->
+                    <div id="help-tab-colors" class="help-tab-content" style="display:none;">
+                        <h4>Color Guide</h4>
+                        <div class="help-colors">
+                            <div class="color-item color-blue">🔵 Blue — Normal / Default</div>
+                            <div class="color-item color-red">🔴 Red — Comparing</div>
+                            <div class="color-item color-orange">🟠 Orange — Swapping / Visiting</div>
+                            <div class="color-item color-green">🟢 Green — Sorted / Found / Path</div>
+                            <div class="color-item color-teal">🩵 Teal — Visited (graph/grid)</div>
+                            <div class="color-item color-purple">🟣 Purple — Algorithm B (Race Mode)</div>
+                        </div>
+                        <h4 style="margin-top:12px;">Keyboard Shortcuts</h4>
+                        <div class="help-colors">
+                            <div class="color-item">Ctrl+Enter — Run</div>
+                            <div class="color-item">Ctrl+R — Generate</div>
+                            <div class="color-item">Ctrl+L — Clear</div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -331,16 +456,14 @@ for (let i = 0; i < arr.length - 1; i++) {
             <section class="controls-section">
                 <div class="control-buttons">
                     <button id="gen-btn" class="btn btn-primary">Generate Array</button>
-                <div class="control-group grid-only" style="display:none;">
-                    <button id="maze-gen-btn" class="btn btn-warning" title="Generate Maze">Maze</button>
-                    <button id="clear-walls-btn" class="btn btn-secondary" title="Clear Walls">Clear Walls</button>
-                </div>
+                    <button id="maze-gen-btn" class="btn btn-warning grid-only" style="display:none;" title="Generate Maze (also resets grid)">🌀 Maze</button>
+                    <button id="clear-walls-btn" class="btn btn-secondary grid-only" style="display:none;" title="Clear all walls">Clear Walls</button>
                     <button id="run-btn" class="btn btn-success">Run</button>
                     <button id="pause-btn" class="btn btn-warning" style="display:none;">Pause</button>
                     <button id="resume-btn" class="btn btn-info" style="display:none;">Resume</button>
                     <button id="step-btn" class="btn btn-secondary">Step Mode</button>
-                    <button id="step-back-btn" class="btn btn-secondary" style="display:none;" title="Step Backward">Step Back</button>
-                    <button id="step-forward-btn" class="btn btn-secondary" style="display:none;" title="Step Forward">Step Forward</button>
+                    <button id="step-back-btn" class="btn btn-secondary" style="display:none;" title="Step Backward">⟵ Back</button>
+                    <button id="step-forward-btn" class="btn btn-secondary" style="display:none;" title="Step Forward">Forward ⟶</button>
                     <button id="clear-btn" class="btn btn-danger">Clear</button>
                 </div>
                 

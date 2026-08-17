@@ -414,6 +414,34 @@ select.btn-minimal:hover {
   justify-content: center;
 }
 
+/* ── Controls Section Layout ────────────────────────────────────── */
+.controls-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--card);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  border: 1px solid var(--glass);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+.control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.control-settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .control-group {
   display: flex;
   align-items: center;
@@ -688,63 +716,103 @@ input[type="checkbox"] {
   background: var(--card);
   border: 1px solid var(--muted);
   border-radius: var(--radius);
-  padding: var(--pad);
   margin-top: 12px;
   color: var(--text);
-  max-height: 400px;
+  max-height: 480px;
   overflow-y: auto;
 }
 
-.help-panel h3 {
-  margin: 0 0 15px 0;
+.help-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--muted);
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--card) 85%, #000 15%);
+  border-radius: var(--radius) var(--radius) 0 0;
+  gap: 2px;
+}
+
+.help-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+
+.help-tab:hover { color: var(--text); }
+
+.help-tab.active {
   color: var(--accent);
-  font-size: 16px;
+  border-bottom-color: var(--accent);
+}
+
+.help-tab-content {
+  padding: 12px 14px;
+}
+
+.help-note {
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--warn);
+  margin-bottom: 10px;
 }
 
 .help-panel h4 {
-  margin: 15px 0 8px 0;
+  margin: 12px 0 6px 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
+.help-tab-content h4:first-child { margin-top: 0; }
+
 .help-section {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .help-section pre {
   background: color-mix(in srgb, var(--card) 85%, #000 15%);
   border: 1px solid var(--muted);
   border-radius: 6px;
-  padding: 12px;
-  margin: 8px 0 0 0;
+  padding: 10px 12px;
+  margin: 6px 0 0 0;
   font-family: 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text);
   overflow-x: auto;
+  line-height: 1.5;
 }
 
 .help-colors {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-  margin-top: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .color-item {
   background: color-mix(in srgb, var(--card) 85%, #000 15%);
   border: 1px solid var(--muted);
   border-radius: 4px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   font-size: 12px;
   color: var(--text);
 }
 
 #help-btn {
-  width: 35px;
-  height: 35px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   font-weight: bold;
-  font-size: 16px;
+  font-size: 15px;
   padding: 0;
 }
 
@@ -1181,6 +1249,27 @@ input[type="checkbox"] {
 
 .visualization-section {
   position: relative;
+}
+
+/* ── Visualization Header: compact info bar (not a big dark block) ─ */
+.visualization-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 2px 2px;
+  min-height: 0;
+}
+
+.visualization-header h2 {
+  display: none;  /* Hidden — the visualization IS its own title */
+}
+
+.operation-info {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: monospace;
+  min-height: 18px;
+  flex: 1;
 }
 
 /* ---- Pseudocode Panel Workspace Layout ---- */
