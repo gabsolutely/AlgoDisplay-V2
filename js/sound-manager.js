@@ -111,10 +111,12 @@ class SoundManager {
 
     const baseOct = this._getOctaveMult();
     const sounds = {
-      compare:  { freq: 800  * baseOct, duration: 0.08, wave: this.waveform },
-      swap:     { freq: 400  * baseOct, duration: 0.15, wave: this.waveform },
-      complete: { freq: 600  * baseOct, duration: 0.25, wave: this.waveform },
-      generate: { freq: 1000 * baseOct, duration: 0.08, wave: this.waveform },
+      compare:  { freq: 800  * baseOct, duration: 0.08,  wave: this.waveform },
+      swap:     { freq: 400  * baseOct, duration: 0.15,  wave: this.waveform },
+      complete: { freq: 600  * baseOct, duration: 0.25,  wave: this.waveform },
+      generate: { freq: 1000 * baseOct, duration: 0.08,  wave: this.waveform },
+      // Softer, shorter blip for graph node visits and grid cell traversal
+      visit:    { freq: 500  * baseOct, duration: 0.055, wave: 'sine' },
     };
     const s = sounds[type];
     if (!s) return;

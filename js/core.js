@@ -135,6 +135,8 @@ class AlgorithmVisualizer {
       directedToggle: document.getElementById("directed-toggle"),
       mazeGenBtn: document.getElementById("maze-gen-btn"),
       clearWallsBtn: document.getElementById("clear-walls-btn"),
+      graphNodeCountInput: document.getElementById("graph-node-count"),
+      gridSizeSelect: document.getElementById("grid-size-select"),
     };
 
     console.log("Elements found:", this.validateElements());
@@ -245,19 +247,52 @@ class AlgorithmVisualizer {
       };
     }
     // Grid tab: recursive-backtracking maze generator + wall eraser
+    // Maze button: stop any running algo, then generate grid + apply maze
     if (this.elements.mazeGenBtn) {
       this.elements.mazeGenBtn.onclick = () => {
+        // Stop any running algo cleanly
+        this.shouldStop = true;
+        this.isRunning = false;
+        this.isPaused = false;
+        this._generation += 1;
+        if (this.stepResolve) { this.stepResolve(); this.stepResolve = null; }
+        this.pythonRunner.stopExecution();
+        this.elements.runBtn.style.display = 'inline-block';
+        this.elements.pauseBtn.style.display = 'none';
+        this.elements.resumeBtn.style.display = 'none';
+        // Apply size from selector if present
+        const [rows, cols] = this._getGridSize();
         this.graphEngine.generateRecursiveMaze();
+        this.gridRenderer.init(this.elements.container, this.graphEngine);
         this.gridRenderer.render();
-        this.log("Generated Recursive Backtracking Maze.");
+        this.history = [];
+        this.future = [];
+        this.saveSnapshot('init_grid');
+        this.log('🌀 Generated Recursive Backtracking Maze.');
+        this.sounds.play('generate');
       };
     }
     if (this.elements.clearWallsBtn) {
       this.elements.clearWallsBtn.onclick = () => {
         this.graphEngine.clearGridWalls();
         this.gridRenderer.render();
-        this.log("Cleared all grid walls.");
+        this.log('Cleared all grid walls.');
       };
+    }
+
+    // Help panel tab switching
+    const helpPanel = this.elements.helpPanel;
+    if (helpPanel) {
+      helpPanel.addEventListener('click', (e) => {
+        if (e.target.matches('.help-tab')) {
+          const tab = e.target.dataset.tab;
+          helpPanel.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+          helpPanel.querySelectorAll('.help-tab-content').forEach(c => c.style.display = 'none');
+          e.target.classList.add('active');
+          const content = document.getElementById('help-tab-' + tab);
+          if (content) content.style.display = '';
+        }
+      });
     }
 
     // Language + algorithm dropdowns — both refill the editor textarea
@@ -562,11 +597,11 @@ class AlgorithmVisualizer {
     // Update generate button text based on category
     if (this.elements.generateBtn) {
       if (isGraph) {
-        this.elements.generateBtn.textContent = "[GEN] Generate Graph / Tree";
+        this.elements.generateBtn.textContent = '🔄 New Graph';
       } else if (isGrid) {
-        this.elements.generateBtn.textContent = "[GEN] Generate Grid";
+        this.elements.generateBtn.textContent = '🔄 New Grid';
       } else {
-        this.elements.generateBtn.textContent = "[GEN] Generate Array";
+        this.elements.generateBtn.textContent = '🔄 Generate Array';
       }
     }
 
@@ -595,6 +630,19 @@ class AlgorithmVisualizer {
         this.elements.raceOnlyGroups.forEach(el => el.style.display = "");
       }
       this.renderPseudocode(this.currentAlgorithm);
+    }
+
+    // Auto-switch help panel tab to match category
+    if (this.elements.helpPanel) {
+      const targetTab = isGraph ? 'graph' : isGrid ? 'grid' : 'sort-search';
+      const allTabs = this.elements.helpPanel.querySelectorAll('.help-tab');
+      const allContents = this.elements.helpPanel.querySelectorAll('.help-tab-content');
+      allTabs.forEach(t => t.classList.remove('active'));
+      allContents.forEach(c => c.style.display = 'none');
+      const activeTab = this.elements.helpPanel.querySelector(`[data-tab="${targetTab}"]`);
+      if (activeTab) activeTab.classList.add('active');
+      const activeContent = document.getElementById('help-tab-' + targetTab);
+      if (activeContent) activeContent.style.display = '';
     }
   }
 
@@ -1773,24 +1821,31 @@ async def search(arr, target):
     this.elements.actionControls.innerHTML = "";
 
     if (this.currentCategory === "graph") {
-      const gPreset = this.elements.graphPresetSelect ? this.elements.graphPresetSelect.value : "tree";
-      this.graphEngine.generatePreset(gPreset);
+      const gPreset = this.elements.graphPresetSelect ? this.elements.graphPresetSelect.value : "random";
+      // Read node count from the new control (graph-only input)
+      let nodeCount = 8;
+      if (this.elements.graphNodeCountInput) {
+        const v = parseInt(this.elements.graphNodeCountInput.value);
+        if (!isNaN(v) && v >= 4 && v <= 18) nodeCount = v;
+      }
+      this.graphEngine.generatePreset(gPreset, nodeCount);
       this.graphRenderer.init(this.elements.container, this.graphEngine);
       this.graphRenderer.render();
       this.history = [];
       this.future = [];
       this.saveSnapshot("init_graph");
-      this.log(`Generated new ${gPreset.toUpperCase()} structure`);
+      this.log(`🔄 Generated ${gPreset.toUpperCase()} graph (${nodeCount} nodes)`);
       this.sounds.play('generate');
       return;
     } else if (this.currentCategory === "grid") {
-      this.graphEngine.initGrid();
+      const [rows, cols] = this._getGridSize();
+      this.graphEngine.initGrid(rows, cols);
       this.gridRenderer.init(this.elements.container, this.graphEngine);
       this.gridRenderer.render();
       this.history = [];
       this.future = [];
       this.saveSnapshot("init_grid");
-      this.log(`⚡ Generated new Grid layout`);
+      this.log(`⚡ Generated new Grid layout (${rows}×${cols})`);
       this.sounds.play('generate');
       return;
     }
@@ -1875,14 +1930,32 @@ async def search(arr, target):
     this.saveSnapshot("init_array");
     const extra = preset === "nearly-sorted" ?
       ` (swaps=${this.elements.nearlySwapsSlider?.value ?? 30}%, spread=${this.elements.nearlySpreadSlider?.value ?? 25}%)` : "";
-    this.log(`Generated array of size ${this.array.length} (preset: ${preset})${extra}`);
+    this.log(`🔄 Generated array of ${this.array.length} items (preset: ${preset})${extra}`);
     this.sounds.play('generate');
+  }
+
+  /** Helper: read grid size from the grid-size-select dropdown. Returns [rows, cols]. */
+  _getGridSize() {
+    if (this.elements.gridSizeSelect) {
+      const val = this.elements.gridSizeSelect.value || '15x25';
+      const parts = val.split('x');
+      const rows = parseInt(parts[0]) || 15;
+      const cols = parseInt(parts[1]) || 25;
+      return [rows, cols];
+    }
+    return [15, 25];
   }
 
   // ── Utility Functions ───────────────────────────────────────────────────
   // Update statistics display (comparisons, swaps, time, etc.)
   updateStats() {
-    this.elements.statSize.textContent = this.array.length;
+    // For graph/grid, 'size' means node count or cell count
+    const sizeVal = this.currentCategory === 'graph'
+      ? this.graphEngine.nodes.length
+      : this.currentCategory === 'grid'
+        ? (this.graphEngine.gridRows * this.graphEngine.gridCols)
+        : this.array.length;
+    this.elements.statSize.textContent = sizeVal;
     this.elements.statComparisons.textContent = this.stats.comparisons;
     this.elements.statSwaps.textContent = this.stats.swaps;
     this.elements.statSteps.textContent = this.stats.steps;
@@ -2270,6 +2343,7 @@ async def search(arr, target):
         this.log("Tip: For Python, use 'async def sort(arr):' or 'async def search(arr, target):'");
       }
     } finally {
+      // Always set endTime before calling updateStats() so the timer stops
       if (!this.stats.endTime && this.stats.startTime) this.stats.endTime = Date.now();
       if (!this.statsB.endTime && this.statsB.startTime) this.statsB.endTime = Date.now();
       this.updateStats();
@@ -2544,7 +2618,7 @@ async def search(arr, target):
           if (this.musicalMode) {
             this.sounds.playMusical(node.id * 10, 50, [10, 20, 30, 40, 50, 60, 70, 80]);
           } else if (isA) {
-            this.sounds.play("compare");
+            this.sounds.play('visit');  // softer blip for node traversal
           }
         }
         await this.sleep(this.speed);
@@ -2620,6 +2694,8 @@ async def search(arr, target):
           cell.type = type;
         }
         this.gridRenderer.render();
+        // Distinct softer sound for grid cell visits
+        if (isA) this.sounds.play('visit');
         await this.sleep(this.speed / 2);
       },
 
@@ -3018,9 +3094,15 @@ async def search(arr, target):
   updateComplexityData() {
     if (!this.complexityDataA) this.complexityDataA = [];
     if (!this.complexityDataB) this.complexityDataB = [];
-    this.complexityDataA.push(this.stats.comparisons + this.stats.swaps);
+    // For graph/grid, operations = steps (no comparisons/swaps in the traditional sense)
+    // For sort/search, operations = comparisons + swaps
+    const getOps = (s) => {
+      const cat = this.currentCategory;
+      return (cat === 'graph' || cat === 'grid') ? s.steps : (s.comparisons + s.swaps);
+    };
+    this.complexityDataA.push(getOps(this.stats));
     if (this.raceMode) {
-      this.complexityDataB.push(this.statsB.comparisons + this.statsB.swaps);
+      this.complexityDataB.push(getOps(this.statsB));
     }
     if (this.complexityCanvas && this.complexityOverlay?.classList.contains('visible')) {
       this.renderComplexityChart();
