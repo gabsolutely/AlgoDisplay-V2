@@ -90,7 +90,7 @@ class AlgorithmVisualizer {
       octaveSelect: document.getElementById("octave-select"),
       volumeRange: document.getElementById("volume-range"),
       volumeVal: document.getElementById("volume-val"),
-      producerJamBtn: document.getElementById("producer-jam-btn"),
+      producerBeatBtn: document.getElementById("produce-beat-btn"),
       themeToggle: document.getElementById("theme-toggle"),
       paletteToggle: document.getElementById("palette-toggle"),
       editor: document.getElementById("code-editor"),
@@ -334,9 +334,9 @@ class AlgorithmVisualizer {
       this.elements.volumeRange.addEventListener('change', updateVolume);
       updateVolume();
     }
-    // Jam button (audition current sound)
-    if (this.elements.producerJamBtn) {
-      this.elements.producerJamBtn.onclick = () => {
+    // Beat button (audition current sound)
+    if (this.elements.producerBeatBtn) {
+      this.elements.producerBeatBtn.onclick = () => {
         this.sounds.playProducerDemo();
       };
     }

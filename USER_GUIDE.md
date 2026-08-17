@@ -222,7 +222,7 @@ Turn algorithm visualization into a live music session:
 - **Synth Sounds**: Pick custom wave synthesis (`Triangle`, `Sine`, `Square 8-Bit`, `Sawtooth Cyber Lead`, `Additive Organ`, `Marimba Percussive Pluck`, `Sci-Fi FM Laser Sweep`).
 - **Scales**: Select tunings (`Pentatonic`, `Major`, `Minor`, `Blues`, `Dorian`, `Harmonic Minor`, `Japanese InSen`, `Chromatic`).
 - **Pitch Transpose**: Transpose octave range (`Bass Low`, `Mid Normal`, `Lead High`, `Chimes Ultra`).
-- **Jam Button**: Audition a live producer melody groove matching your active kit!
+- **Beat Button**: Audition a live producer melody groove matching your active kit!
 
 ### Shareable Run State & Complexity Overlay
 - **Shareable State**: Click **Share** in the toolbar to copy a URL encoding your active category, language, algorithm, speed, array size, preset, and race mode config to share with others!
