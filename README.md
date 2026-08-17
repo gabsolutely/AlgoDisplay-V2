@@ -1,6 +1,8 @@
-# AlgoDisplay — Interactive Algorithm Visualization Platform // ######################
-----------------------------------
-A web-based algorithm visualization tool with:
+# AlgoDisplay V2 — Interactive Algorithm Visualizer
+
+A fully browser-based algorithm visualizer. No installation, no server, no dependencies. Write custom **JavaScript or Python** algorithms and watch them animate in real time across 4 visualization modes.
+
+
  - Dual-language support (JavaScript & Python)
  - Real-time visual feedback
  - Step-by-step execution

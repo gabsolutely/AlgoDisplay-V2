@@ -1,4 +1,4 @@
-# AlgoDisplay User Guide
+# AlgoDisplay V2 — User Guide
 
 ## Overview
 AlgoDisplay is an interactive web application that allows you to write, test, and visualize sorting algorithms in real-time. You can write code in JavaScript or Python and watch as your algorithm sorts an array step by step.
