@@ -2605,7 +2605,7 @@ async def search(arr, target):
       },
 
       visitNode: async (nodeId, color = "visiting") => {
-        if (this.shouldStop) return;
+        if (this.shouldStop || this._generation !== this._runGeneration) return;
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
@@ -2667,10 +2667,20 @@ async def search(arr, target):
         this.updateComplexityData();
         this.highlightPseudocode('found', side);
         if (Array.isArray(pathNodes)) {
+          // Mark path nodes
           pathNodes.forEach(id => {
             const n = this.graphEngine.nodes.find(node => node.id === id || node.label === String(id));
             if (n) n.status = "path";
           });
+          // Mark path edges between consecutive nodes for a full path highlight
+          for (let _pi = 0; _pi < pathNodes.length - 1; _pi++) {
+            const _a = pathNodes[_pi], _b = pathNodes[_pi + 1];
+            const _edge = this.graphEngine.edges.find(e =>
+              (e.source === _a && e.target === _b) ||
+              (!this.graphEngine.isDirected && e.source === _b && e.target === _a)
+            );
+            if (_edge) _edge.status = "path";
+          }
           this.graphRenderer.render();
         }
         if (isA) {
@@ -2681,21 +2691,37 @@ async def search(arr, target):
       },
 
       visitGridCell: async (r, c, type = "visiting") => {
-        if (this.shouldStop) return;
+        if (this.shouldStop || this._generation !== this._runGeneration) return;
         if (!this.graphEngine.grid[r] || !this.graphEngine.grid[r][c]) return;
         const cell = this.graphEngine.grid[r][c];
         if (cell.type === "wall") return;
+
+        // Path cells light up INSTANTLY — no step count, no sleep, no per-cell sound.
+        // The 'complete' sound fires once when the whole algorithm finishes (runVisualization).
+        if (type === "path") {
+          if (cell.type !== "start" && cell.type !== "target") cell.type = "path";
+          this.gridRenderer.render();
+          return;
+        }
+
         statsObj.steps++;
         this.updateStats();
         this.updateComplexityData();
-        this.highlightPseudocode(type === "path" ? 'found' : 'visitGridCell', side);
+        this.highlightPseudocode('visitGridCell', side);
         if (isA) this.saveSnapshot("visitGridCell");
         if (cell.type !== "start" && cell.type !== "target") {
           cell.type = type;
         }
         this.gridRenderer.render();
-        // Distinct softer sound for grid cell visits
-        if (isA) this.sounds.play('visit');
+        if (this.musicalMode) {
+          // Map cell position to a musical note via its linearised index
+          const totalCells = this.graphEngine.gridRows * this.graphEngine.gridCols;
+          const cellIdx    = r * this.graphEngine.gridCols + c;
+          const fakeArr    = Array.from({ length: totalCells }, (_, k) => k);
+          this.sounds.playMusical(cellIdx, totalCells - 1 - cellIdx, fakeArr);
+        } else if (isA) {
+          this.sounds.play('visit');
+        }
         await this.sleep(this.speed / 2);
       },
 
@@ -2969,6 +2995,7 @@ async def search(arr, target):
       speed: this.speed,
       size: this.elements.arraySizeInput ? parseInt(this.elements.arraySizeInput.value) : 20,
       preset: this.elements.presetSelect ? this.elements.presetSelect.value : "random",
+      code: this.elements.editor ? this.elements.editor.value : '',
     };
     const json = JSON.stringify(state);
     const b64 = btoa(json);
@@ -3016,6 +3043,10 @@ async def search(arr, target):
         this.elements.presetSelect.value = state.preset;
       }
       this.onCategoryChange();
+      // Restore custom editor code AFTER onCategoryChange() (which may overwrite it with a template)
+      if (state.code && this.elements.editor) {
+        this.elements.editor.value = state.code;
+      }
       return true;
     } catch (e) {
       console.warn("Failed to load state from URL:", e);
@@ -3145,8 +3176,11 @@ async def search(arr, target):
     const complexityB = isRace ? this.getTheoreticalComplexity(this.currentAlgorithmB) : null;
     const theoreticalMaxA = complexityA.fn(n);
     const theoreticalMaxB = complexityB ? complexityB.fn(n) : 0;
-    const finalOpsA = this.stats.comparisons + this.stats.swaps;
-    const finalOpsB = isRace ? (this.statsB.comparisons + this.statsB.swaps) : 0;
+    // For graph/grid, the meaningful metric is steps (nodes visited), not comp+swap.
+    const _chartOps = (s) => (this.currentCategory === 'graph' || this.currentCategory === 'grid')
+      ? s.steps : (s.comparisons + s.swaps);
+    const finalOpsA = _chartOps(this.stats);
+    const finalOpsB = isRace ? _chartOps(this.statsB) : 0;
     const actualMax = Math.max(
       theoreticalMaxA * 1.05,
       theoreticalMaxB * 1.05,
@@ -3248,7 +3282,9 @@ async def search(arr, target):
     ctx.save();
     ctx.translate(14, pad.top + plotH / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('Operations (comp + swap)', 0, 0);
+    const _yLabel = (this.currentCategory === 'graph' || this.currentCategory === 'grid')
+      ? 'Steps / nodes visited' : 'Operations (comp + swap)';
+    ctx.fillText(_yLabel, 0, 0);
     ctx.restore();
 
     // Y-axis scale marks (5 ticks)
