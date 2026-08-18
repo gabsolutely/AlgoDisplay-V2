@@ -16,10 +16,12 @@ class GraphRenderer {
     this.engine      = null;             // GraphEngine reference (data source)
     this.edgesGroup  = null;             // <g id="edges-layer">
     this.nodesGroup  = null;             // <g id="nodes-layer">
-    this.draggedNode = null;             // node object currently being dragged
+    this.activeNode  = null;             // node object currently pressed/dragged
+    this.isDragging  = false;            // true if mouse moved beyond click threshold
     this.dragOffset  = { x: 0, y: 0 };   // mouse→node offset at drag start (viewBox coords)
-    this.onNodeClick = null;             // optional callback
-    this.onEdgeClick = null;             // optional callback
+    this.downPos     = { x: 0, y: 0 };   // screen coords where mousedown occurred
+    this.downButton  = 0;                // 0 = left click, 2 = right click
+    this.downShift   = false;            // true if shift was held on mousedown
   }
 
   /**
@@ -58,7 +60,7 @@ class GraphRenderer {
     marker.appendChild(path);
     defs.appendChild(marker);
 
-    // Glow filter — visiting nodes (amber pulse)
+    // Glow filter — visiting nodes (amber pulse) and path nodes (green)
     const mkFilter = (id, blur) => {
       const f = document.createElementNS("http://www.w3.org/2000/svg", "filter");
       f.setAttribute("id", id);
@@ -85,13 +87,14 @@ class GraphRenderer {
 
     // Static hint text for click-to-select interaction
     const hint = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    hint.setAttribute("x", "300"); hint.setAttribute("y", "314");
+    hint.setAttribute("x", "300");
+    hint.setAttribute("y", "314");
     hint.setAttribute("text-anchor", "middle");
-    hint.setAttribute("fill", "rgba(255,255,255,0.20)");
-    hint.setAttribute("font-size", "9");
+    hint.setAttribute("fill", "rgba(255,255,255,0.30)");
+    hint.setAttribute("font-size", "10");
     hint.setAttribute("font-family", "Inter, system-ui, sans-serif");
     hint.setAttribute("pointer-events", "none");
-    hint.textContent = "Click node → Set Start  |  Shift+Click → Set Target  |  Drag to reposition";
+    hint.textContent = "Left-Click node: Set Start (S)  |  Right-Click / Shift+Click: Set Target (T)  |  Drag to move";
     this.svg.appendChild(hint);
 
     this.svg.appendChild(this.edgesGroup);
@@ -103,27 +106,53 @@ class GraphRenderer {
   }
 
   /**
-   * Wire up node drag-to-reposition.
-   * Mouse→viewBox conversion: scale client coords by viewBox/canvas ratio because
-   * the SVG is responsive (width=100%) but node coords are in viewBox units.
+   * Wire up node drag-to-reposition and click-to-set start/target.
+   * Handles mouse events cleanly on window so drags never stick.
    */
   setupInteractions() {
-    this.svg.addEventListener("mousemove", (e) => {
-      if (!this.draggedNode) return;
-      const rect   = this.svg.getBoundingClientRect();
-      const scaleX = 600 / rect.width;
-      const scaleY = 320 / rect.height;
-      const mouseX = (e.clientX - rect.left) * scaleX;
-      const mouseY = (e.clientY - rect.top)  * scaleY;
-
-      // Clamp to a 30px inner margin so nodes stay visible inside the canvas.
-      this.draggedNode.x = Math.max(30, Math.min(570, mouseX - this.dragOffset.x));
-      this.draggedNode.y = Math.max(30, Math.min(290, mouseY - this.dragOffset.y));
-      this.render();
+    // Prevent browser context menu on graph so right-clicking smoothly sets target node
+    this.svg.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
     });
 
-    window.addEventListener("mouseup", () => {
-      this.draggedNode = null;
+    window.addEventListener("mousemove", (e) => {
+      if (!this.activeNode) return;
+
+      const dist = Math.hypot(e.clientX - this.downPos.x, e.clientY - this.downPos.y);
+      if (dist > 3) {
+        this.isDragging = true;
+      }
+
+      if (this.isDragging) {
+        const rect   = this.svg.getBoundingClientRect();
+        const scaleX = 600 / rect.width;
+        const scaleY = 320 / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top)  * scaleY;
+
+        // Clamp to a 30px inner margin so nodes stay visible inside the canvas.
+        this.activeNode.x = Math.max(30, Math.min(570, mouseX - this.dragOffset.x));
+        this.activeNode.y = Math.max(30, Math.min(290, mouseY - this.dragOffset.y));
+        this.render();
+      }
+    });
+
+    window.addEventListener("mouseup", (e) => {
+      if (this.activeNode) {
+        if (!this.isDragging) {
+          // Clean tap/click without dragging
+          if (this.downButton === 2 || this.downShift) {
+            // Set as Target node
+            this.engine.setTargetNode(this.activeNode.id);
+          } else {
+            // Set as Start node
+            this.engine.setStartNode(this.activeNode.id);
+          }
+        }
+        this.activeNode = null;
+        this.isDragging = false;
+        this.render();
+      }
     });
   }
 
@@ -198,16 +227,19 @@ class GraphRenderer {
       const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
       group.style.cursor = "pointer";
 
+      const isStart  = node.id === this.engine.startNodeId;
+      const isTarget = node.id === this.engine.targetNodeId;
+
       // Status → fill/stroke color map.
       let fillColor   = "var(--card)";
       let strokeColor = "var(--accent)";
       let strokeWidth = "2";
 
-      if      (node.status === "start")    { strokeColor = "var(--ok)";          fillColor = "rgba(16, 185, 129, 0.2)"; }
-      else if (node.status === "target")   { strokeColor = "var(--danger)";      fillColor = "rgba(251, 113, 133, 0.2)"; }
-      else if (node.status === "visiting") { strokeColor = "var(--warn)";        fillColor = "rgba(245, 158, 11, 0.3)"; strokeWidth = "3"; }
+      if      (isStart)                    { strokeColor = "var(--ok)";          fillColor = "rgba(16, 185, 129, 0.25)"; strokeWidth = "2.5"; }
+      else if (isTarget)                   { strokeColor = "var(--danger)";      fillColor = "rgba(251, 113, 133, 0.25)"; strokeWidth = "2.5"; }
+      else if (node.status === "visiting") { strokeColor = "var(--warn)";        fillColor = "rgba(245, 158, 11, 0.3)";  strokeWidth = "3"; }
       else if (node.status === "visited")  { strokeColor = "#a855f7";            fillColor = "rgba(168, 85, 247, 0.2)"; }
-      else if (node.status === "path")     { strokeColor = "var(--ok)";          fillColor = "rgba(16, 185, 129, 0.4)"; strokeWidth = "3"; }
+      else if (node.status === "path")     { strokeColor = "var(--ok)";          fillColor = "rgba(16, 185, 129, 0.4)";  strokeWidth = "3"; }
 
       const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", node.x);
@@ -219,7 +251,7 @@ class GraphRenderer {
 
       // Apply SVG glow filter for active node states
       if      (node.status === "visiting") circle.setAttribute("filter", "url(#glow-visiting)");
-      else if (node.status === "path")     circle.setAttribute("filter", "url(#glow-path)");
+      else if (node.status === "path" || isStart) circle.setAttribute("filter", "url(#glow-path)");
 
       const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
       label.setAttribute("x", node.x);
@@ -230,6 +262,28 @@ class GraphRenderer {
       label.setAttribute("text-anchor", "middle");
       label.setAttribute("dominant-baseline", "central");
       label.textContent = node.label;
+
+      // Start / Target indicator badge (top-left of node)
+      if (isStart || isTarget) {
+        const tagBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        tagBg.setAttribute("cx", node.x - 12);
+        tagBg.setAttribute("cy", node.y - 12);
+        tagBg.setAttribute("r", "7");
+        tagBg.setAttribute("fill", isStart ? "var(--ok)" : "var(--danger)");
+
+        const tagText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        tagText.setAttribute("x", node.x - 12);
+        tagText.setAttribute("y", node.y - 11.5);
+        tagText.setAttribute("fill", "#ffffff");
+        tagText.setAttribute("font-size", "8");
+        tagText.setAttribute("font-weight", "bold");
+        tagText.setAttribute("text-anchor", "middle");
+        tagText.setAttribute("dominant-baseline", "central");
+        tagText.textContent = isStart ? "S" : "T";
+
+        group.appendChild(tagBg);
+        group.appendChild(tagText);
+      }
 
       // Distance badge (top-right of node) — shown only once Dijkstra/Bellman writes a finite distance.
       if (node.distance !== undefined && node.distance !== Infinity) {
@@ -258,38 +312,22 @@ class GraphRenderer {
       group.appendChild(circle);
       group.appendChild(label);
 
-      // Drag + click handler.
-      // Movement < 6px on mouseup = click (set start/target).
-      // Movement >= 6px = drag (reposition).
-      let _downX = 0, _downY = 0;
+      // Node mousedown hook: captures drag initiation and records click parameters
       group.addEventListener("mousedown", (e) => {
-        _downX = e.clientX; _downY = e.clientY;
-        this.draggedNode = node;
+        this.activeNode = node;
+        this.isDragging = false;
+        this.downPos    = { x: e.clientX, y: e.clientY };
+        this.downButton = e.button;
+        this.downShift  = e.shiftKey;
+
         const rect   = this.svg.getBoundingClientRect();
         const scaleX = 600 / rect.width;
         const scaleY = 320 / rect.height;
         const mouseX = (e.clientX - rect.left) * scaleX;
         const mouseY = (e.clientY - rect.top)  * scaleY;
         this.dragOffset = { x: mouseX - node.x, y: mouseY - node.y };
-        e.stopPropagation();
-      });
-      group.addEventListener("mouseup", (e) => {
-        const moved = Math.hypot(e.clientX - _downX, e.clientY - _downY);
-        if (moved < 6) {
-          // Treat as click: shift = set target, plain = set start
-          if (e.shiftKey) {
-            if (node.id !== this.engine.startNodeId) {
-              this.engine.setTargetNode(node.id);
-              this.render();
-            }
-          } else {
-            if (node.id !== this.engine.targetNodeId) {
-              this.engine.setStartNode(node.id);
-              this.render();
-            }
-          }
-        }
-        e.stopPropagation();
+
+        e.preventDefault();
       });
 
       this.nodesGroup.appendChild(group);

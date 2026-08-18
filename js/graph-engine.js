@@ -327,10 +327,13 @@ class GraphEngine {
 
   /**
    * Set the designated start node by ID and reset algorithm state.
-   * Called when the user clicks a node in the graph renderer.
+   * Swaps start and target if user clicks the current target node.
    */
   setStartNode(id) {
     if (this.nodes.find(n => n.id === id)) {
+      if (this.targetNodeId === id) {
+        this.targetNodeId = this.startNodeId;
+      }
       this.startNodeId = id;
       this.resetGraphState();
     }
@@ -338,10 +341,13 @@ class GraphEngine {
 
   /**
    * Set the designated target node by ID and reset algorithm state.
-   * Called when the user shift-clicks a node in the graph renderer.
+   * Swaps start and target if user selects the current start node.
    */
   setTargetNode(id) {
     if (this.nodes.find(n => n.id === id)) {
+      if (this.startNodeId === id) {
+        this.startNodeId = this.targetNodeId;
+      }
       this.targetNodeId = id;
       this.resetGraphState();
     }
