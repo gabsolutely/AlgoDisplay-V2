@@ -90,7 +90,7 @@ class AlgorithmVisualizer {
       octaveSelect: document.getElementById("octave-select"),
       volumeRange: document.getElementById("volume-range"),
       volumeVal: document.getElementById("volume-val"),
-      producerBeatBtn: document.getElementById("produce-beat-btn"),
+      producerBeatBtn: document.getElementById("producer-beat-btn"),
       themeToggle: document.getElementById("theme-toggle"),
       paletteToggle: document.getElementById("palette-toggle"),
       editor: document.getElementById("code-editor"),
