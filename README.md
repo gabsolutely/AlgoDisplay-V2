@@ -1,243 +1,176 @@
-# AlgoDisplay V2 — Interactive Algorithm Visualizer
+# AlgoDisplay V2 — Interactive Algorithm Visualizer & Studio
 
-A fully browser-based algorithm visualizer. No installation, no server, no dependencies. Write custom **JavaScript or Python** algorithms and watch them animate in real time across 4 visualization modes.
+A modern, high-performance, fully browser-based algorithm visualizer and audio laboratory. Zero installation, zero external servers, zero build steps. Write custom JavaScript or Python algorithms and watch them animate live across 4 distinct visualization modes with real-time complexity monitoring, step-back undo/redo, and interactive Web Audio synthesis.
 
+---
 
- - Dual-language support (JavaScript & Python)
- - Real-time visual feedback
- - Step-by-step execution
- - Performance analytics
- - Audio feedback system
- - Custom algorithm editor
-> This is an educational platform designed to help users understand sorting algorithms through interactive visualization and hands-on coding experience.
+## Key Highlights
 
-## Table Of Contents // ############################################
- - System Overview
- - Architecture
- - Features
- - Project Structure
- - Setup & Installation
- - Algorithm Templates
- - Visualization API
- - Performance Metrics
- - Keyboard Shortcuts
- - Troubleshooting
- - Possible Extensions
- - Technical Notes
+- 4 Core Visualization Modes: Sorting (10 algorithms), Searching (5 algorithms), Graph & Tree Traversal (8 algorithms), and Grid Pathfinding (4 algorithms).
+- Dual-Language Engine: Native JavaScript async runtime + WebAssembly Python (Pyodide) runtime.
+- Interactive Graph Studio: Force-directed organic graph generation, tree generator, free node dragging, and click-to-set Start (S) & Target (T) endpoints.
+- Grid Terrain & Weight System: Interactive canvas maze with walls and weighted terrain cells (Grass *2, Sand *4, Mud *8).
+- Web Audio Synthesizer: Sonify operations with 8 musical scales (Pentatonic, Dorian, Harmonic Minor, etc.) and 7 producer synthesizer kits (Marimba, Organ, FM Laser, etc.).
+- Live Complexity Monitor: Real-time chart comparing theoretical Big-O curves (O(1), O(log n), O(n log n), O(n^2), O(V+E)) against actual measured operations.
+- Step-by-Step Time Travel: 500-level snapshot undo/redo system to step backwards and forwards through any algorithm execution.
+- Shareable URLs: Encode algorithm configuration, presets, and custom written code into shareable links.
 
-## System Overview // ############################################
- ### Supported Languages:
- - JavaScript — Native execution for all categories (Sorting, Searching, Graph, Grid)
- - Python — Pyodide WebAssembly runtime (Sorting & Searching)
- ### Built-in Algorithms:
- - Bubble Sort — Classic comparison-based sorting
- - Selection Sort — In-place comparison algorithm  
- - Insertion Sort — Efficient for small datasets
- ### Visualization Elements:
- - Array bars with height representing values
- - Color coding for operations (comparing, swapping, sorted)
- - Real-time statistics display
- - Operation log with timestamps
+---
 
-## Architecture // ##########################################
-### Execution Flow:
-```
- User Input (Code Editor)
-   v
- Language Parser
-   v
- Algorithm Engine (JS/Python)
-   v
- Visualization API
-   v
- Renderer + Audio System
-```
+## Visualization Categories & Algorithms
 
-### Component Structure:
-```
-AlgorithmVisualizer (Main Controller)
-├── PythonRunner (Pyodide Integration)
-├── ArrayRenderer (Visual Output)
-├── SoundManager (Audio Feedback)
-└── Statistics Tracker (Performance)
-```
+### 1. Sorting Algorithms
+- Bubble Sort — O(n^2)
+- Selection Sort — O(n^2)
+- Insertion Sort — O(n^2)
+- Merge Sort — O(n log n)
+- Quick Sort — O(n log n) avg, O(n^2) worst
+- Heap Sort — O(n log n)
+- Shell Sort — O(n^1.3)
+- Cocktail Shaker Sort — O(n^2)
+- Counting Sort — O(n+k)
+- Radix Sort (LSD) — O(nk)
+- Features: Dual Race Mode side-by-side head-to-head comparison, customizable array sizes, pre-sorted and nearly-sorted generator presets.
 
-## Features // #####################################################
- ### Visualization:
- - Real-time array manipulation
- - Smooth animations for swaps
- - Color-coded operations
- - Responsive design for all screen sizes
- - Step-by-step execution mode
+### 2. Searching Algorithms
+- Linear Search — O(n)
+- Binary Search — O(log n) (auto-sorts array before search)
+- Interpolation Search — O(log log n) avg, O(n) worst
+- Exponential Search — O(log n)
+- Ternary Search — O(log n)
+- Features: Target value input selector, search found animations, automatic pre-sorting toggle.
 
- ### Code Execution:
- - JavaScript native execution
- - Python via Pyodide WebAssembly
- - Syntax-aware validation
- - Error handling with helpful messages
- - Stop/resume functionality
+### 3. Graph & Tree Algorithms
+- BFS (Breadth-First Search) — O(V + E)
+- DFS (Depth-First Search) — O(V + E)
+- Dijkstra's Algorithm — O(E log V) (finds shortest weighted path)
+- A* Search Algorithm — O(E) (Euclidean heuristic)
+- Bellman-Ford Algorithm — O(V * E) (supports general weighted graphs)
+- Prim's Algorithm — O(E log V) (Minimum Spanning Tree)
+- Kruskal's Algorithm — O(E log E) (Minimum Spanning Tree)
+- Topological Sort — O(V + E) (Kahn's Algorithm for DAGs)
 
- ### Analytics:
- - Comparison counter
- - Swap counter
- - Step counter
- - Execution time tracking
- - Real-time statistics updates
+### 4. Grid Pathfinding & Mazes
+- Grid BFS — Unweighted shortest path
+- Grid DFS — Unweighted deep exploration
+- Grid Dijkstra — Terrain-cost weighted shortest path
+- Grid A* Search — Manhattan distance guided heuristic shortest path
 
- ### User Experience:
- - Interactive code editor
- - Algorithm template library
- - Adjustable animation speed
- - Audio feedback toggle
- - Keyboard shortcuts
- - Help system
+---
 
-## Project Structure // ############################################
-```bash
-AlgoDisplay/                    # Main project directory
-├── js/                         # JavaScript modules
-│   ├── core.js                 # Main application controller
-│   ├── python-runner.js        # Python execution engine
-│   ├── array-renderer.js       # Visualization renderer
-│   ├── init.js                 # Application entry point
-│   └── sound-manager.js        # Audio feedback system
-├── index.html                  # Main HTML page
-├── style.css                   # Styling and animations
-├── README.md                   # This documentation
-└── USER_GUIDE.md               # Detailed user guide
-```
+## What Do The Values & Glyphs on the Grid Mean?
 
-## Setup & Installation // ############################################
-### Requirements:
- - Modern web browser with ES6+ support
- - Internet connection (for Pyodide loading)
- - Local web server (optional, for development)
-### Quick Start:
-1. Clone or download the project
-2. Open `index.html` in a web browser
-3. Select algorithm and language
-4. Click "Generate Array" then "Run"
-### Development Setup:
-```bash
-# Using Python's built-in server
-python -m http.server 8000
+The grid canvas uses color coding, labels, and numeric multipliers:
 
-# Or using Node.js
-npx serve .
+| Glyph / Label | Color / Style | Meaning & Effect |
+| :--- | :--- | :--- |
+| **S** | Green Badge | **Start Cell** — Origin of pathfinding algorithms. Drag or click to reposition. |
+| **T** | Red Badge | **Target Cell** — Goal destination. Drag or click to reposition. |
+| **Dark Cell** | Slate Navy (#1e293b) | **Wall / Obstacle** — Impassable cell. Algorithms cannot travel through walls. |
+| **`*2` (Grass)** | Green Tint | **Grass Terrain (Weight 2)** — Takes 2x movement cost to traverse. |
+| **`*4` (Sand)** | Yellow Tint | **Sand Terrain (Weight 4)** — Takes 4x movement cost to traverse. |
+| **`*8` (Mud)** | Amber/Brown Tint | **Mud Terrain (Weight 8)** — Heavy movement penalty (8x cost). |
+| **Amber Glow** | Golden Yellow (#f59e0b) | **Visiting Cell** — Currently active exploration wavefront. |
+| **Cyan Overlay** | Cyan (#06b6d4) | **Visited Cell** — Previously inspected cell. |
+| **Green Glow** | Emerald Green (#10b981) | **Final Path** — Optimal path reconstructed from Target to Start. |
 
-# Then open http://localhost:8000
-```
+> **Why Terrain Weights Matter:**
+> Unweighted algorithms (like BFS) treat all open cells as equal cost (1) and find the path with the fewest cells. Weighted algorithms (like Dijkstra and A*) calculate total movement cost, smartly routing around high-penalty mud (*8) and sand (*4) cells when a cheaper grass or clear detour is available.
 
-## Algorithm Templates // ###########################################
-### JavaScript Format:
+---
+
+## Graph Controls & Selection
+
+- **Move Nodes:** Click and drag any node circle freely across the SVG canvas.
+- **Set Start Node (S):** Left-click any node. The node is outlined in emerald green with an S badge.
+- **Set Target Node (T):** Right-click (or Shift + Left-Click) any node. The node is outlined in rose red with a T badge.
+- **Start/Target Swap:** Clicking the current Target node as the new Start node automatically swaps their positions.
+- **Organic Generation:** The "New Graph" generator uses a force-directed layout with repulsion separation and a guaranteed spanning tree so nodes are well-spaced and organic.
+- **Tree Generator:** Generates clean hierarchical trees with the Target node placed on an organic leaf node.
+- **Path Glow:** Reconstructed paths light up both nodes and connecting edges in glowing emerald green.
+
+---
+
+## Sound Studio & Musical Sonification
+
+AlgoDisplay V2 features a Web Audio synthesizer that generates audio directly from mathematical frequencies:
+
+- **Musical Mode:** Instead of plain blips, operations trigger chords and scale notes mapped to element magnitudes or node/cell coordinates.
+- **8 Musical Scales:**
+  1. `Pentatonic` (default melodic scale)
+  2. `Major`
+  3. `Minor`
+  4. `Blues`
+  5. `Dorian`
+  6. `Harmonic Minor`
+  7. `Insen` (Traditional Japanese scale)
+  8. `Chromatic`
+- **7 Producer Kits & Waveforms:**
+  - `Default` (Triangle wave)
+  - `Chiptune` (8-bit Square wave)
+  - `Lo-Fi` (Smooth Sine wave)
+  - `Marimba` (Fast-decay percussive acoustic simulation)
+  - `Synthwave` (Sawtooth wave with rich harmonics)
+  - `Sci-Fi` (2-oscillator Frequency Modulation laser synth)
+  - `Organ` (3-harmonic stacked sine organ)
+
+---
+
+## Visualization API Reference
+
+When writing custom algorithms in the code editor, the following functions are injected into the runtime environment:
+
+### Common & Array Operations (Sort / Search)
 ```javascript
-// Use async/await for visualization functions
-for (let i = 0; i < arr.length - 1; i++) {
-  for (let j = 0; j < arr.length - i - 1; j++) {
-    await compare(j, j + 1);
-    if (arr[j] > arr[j + 1]) {
-      await swap(arr, j, j + 1);
-    }
-  }
-}
+await compare(i, j);        // Highlights indices i and j, plays comparison audio
+await swap(arr, i, j);      // Animates visual swap between indices i and j
+await renderArray(arr);     // Redraws the array
+await markFound(i);         // Highlights matching target element
+await sleep(ms);            // Pauses execution (respects speed slider and pause button)
+log(message);               // Prints message to the operation console
 ```
 
-### Python Format:
-```python
-# Must define async sort(arr) function
-async def sort(arr):
-    n = len(arr)
-    for i in range(n):
-        for j in range(n - i - 1):
-            await compare(j, j + 1)
-            if arr[j] > arr[j + 1]:
-                await swap(arr, j, j + 1)
+### Graph Operations
+```javascript
+const nodes = getNodes();                   // Returns array of all { id, label, x, y }
+const startNode = getStartNode();           // Returns designated start node
+const targetNode = getTargetNode();         // Returns designated target node
+const neighbors = getNeighbors(nodeId);     // Returns [{ id, weight }, ...]
+await visitNode(nodeId, "visiting");        // Highlights node (visiting | visited | path)
+await visitEdge(fromId, toId, "exploring"); // Highlights edge
+await markPath([nodeA, nodeB, ...]);        // Highlights complete path (nodes + edges)
+await updateDistance(nodeId, distance);     // Displays distance badge on node
 ```
 
-## Visualization API // ############################################
- ### Core Functions:
- - `await compare(i, j)` — Highlight and compare two indices
- - `await swap(arr, i, j)` — Animate swap between two positions
- - `await renderArray(arr)` — Re-render the entire array
- - `await sleep(ms)` — Pause execution for specified time
- - `log(message)` — Add message to operation log
+### Grid Operations
+```javascript
+const start = getStartCell();               // Returns { row, col }
+const target = getTargetCell();             // Returns { row, col }
+const neighbors = getGridNeighbors(r, c);   // Returns walkable neighbors with .weight
+await visitGridCell(r, c, "visiting");      // Highlights cell (visiting | visited)
+await visitGridCell(r, c, "path");          // Instantly paints cell on final path
+```
 
- ### Return Values:
- - All functions are async and must be awaited
- - Array modifications should use the swap function for proper animation
- - Direct array assignments won't be visualized
+---
 
-## Performance Metrics // #########################################
- ### Tracked Statistics:
- - **Comparisons** — Number of element comparisons performed
- - **Swaps** — Number of element exchanges executed
- - **Steps** — Total operations (comparisons + swaps + renders)
- - **Time** — Algorithm execution duration in milliseconds
+## Keyboard Shortcuts
 
- ### Optimization Features:
- - Adaptive speed scaling based on array size
- - Efficient DOM updates
- - Minimal memory allocation during execution
- - Early termination on stop conditions
+| Shortcut | Action |
+| :--- | :--- |
+| `Ctrl / Cmd + Enter` | Run currently active algorithm |
+| `Ctrl / Cmd + R` | Generate new dataset (Array / Graph / Grid) |
+| `Ctrl / Cmd + L` | Clear canvas and reset statistics |
+| `Space` | Pause / Resume live visualization |
 
-## Keyboard Shortcuts // ############################################
-- `Ctrl/Cmd + Enter` — Run current algorithm
-- `Ctrl/Cmd + R` — Generate new random array
-- `Ctrl/Cmd + L` — Clear all data and reset
+---
 
-## Troubleshooting // ############################################
- ### Common Issues:
- - **Python not loading**: Check internet connection for Pyodide
- - **Algorithm not stopping**: Ensure proper await usage in Python
- - **No animations**: Verify swap function usage instead of direct assignment
- - **Performance issues**: Reduce array size or increase animation speed
+## Getting Started
 
- ### Error Messages:
- - "Code cannot be empty" — Enter algorithm code before running
- - "Missing 'await'" — Add await before visualization function calls
- - "Python not ready" — Wait for Pyodide to load completely
- - "Infinite loops detected" — Check algorithm termination conditions
+Simply open `index.html` in any modern web browser. No web server is required for JavaScript mode. For Python execution, an active internet connection is used to load the Pyodide WebAssembly package.
 
-## Possible Extensions // ##########################################
- ### Algorithm Support:
- - More sorting algorithms (merge, quick, heap, radix)
- - Search algorithms (binary, linear, interpolation)
- - Graph algorithms (DFS, BFS, Dijkstra, A*)
- - Data structure visualizations (trees, linked lists, stacks)
-
- ### Advanced Features:
- - Algorithm complexity analysis (Big O notation)
- - Multi-threading visualization
- - Custom comparison functions
- - Algorithm racing/comparison mode
- - Export animations as video/GIF
-
- ### Platform Integration:
- - Learning management system integration
- - Progress tracking and analytics
- - Collaborative coding features
- - Mobile application version
- - Classroom management tools
-
-## Technical Notes // #############################################
- ### Performance Considerations:
- - JavaScript algorithms execute natively in the browser
- - Python algorithms run in WebAssembly with ~10-20% overhead
- - Large arrays (>100 elements) may cause performance issues
- - Animation speed automatically scales with array size
- - Python may take a moment to load initially (Pyodide loading)
-
- ### Browser Compatibility:
- - Requires modern browser with ES6+ support
- - Pyodide requires WebAssembly support
- - Tested on Chrome 90+, Firefox 88+, Safari 14+
- - Mobile browsers supported with touch controls
-
- ### Memory Management:
- - Automatic cleanup on algorithm termination
- - Event listener cleanup on page unload
- - Pyodide instance reuse across multiple executions
- - Garbage collection optimization for frequent operations
-
-> - **For detailed usage instructions and examples, see USER_GUIDE.md**
-> - **Contributions and bug reports welcome on GitHub Issues**
+```bash
+# Optional local development server
+npx serve .
+# Or with Python
+python -m http.server 8000
+```
