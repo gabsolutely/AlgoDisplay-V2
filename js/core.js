@@ -597,11 +597,11 @@ class AlgorithmVisualizer {
     // Update generate button text based on category
     if (this.elements.generateBtn) {
       if (isGraph) {
-        this.elements.generateBtn.textContent = '🔄 New Graph';
+        this.elements.generateBtn.textContent = 'New Graph';
       } else if (isGrid) {
-        this.elements.generateBtn.textContent = '🔄 New Grid';
+        this.elements.generateBtn.textContent = 'New Grid';
       } else {
-        this.elements.generateBtn.textContent = '🔄 Generate Array';
+        this.elements.generateBtn.textContent = 'Generate Array';
       }
     }
 
@@ -1930,7 +1930,7 @@ async def search(arr, target):
     this.saveSnapshot("init_array");
     const extra = preset === "nearly-sorted" ?
       ` (swaps=${this.elements.nearlySwapsSlider?.value ?? 30}%, spread=${this.elements.nearlySpreadSlider?.value ?? 25}%)` : "";
-    this.log(`🔄 Generated array of ${this.array.length} items (preset: ${preset})${extra}`);
+    this.log(`Generated array of ${this.array.length} items (preset: ${preset})${extra}`);
     this.sounds.play('generate');
   }
 
