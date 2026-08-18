@@ -149,7 +149,21 @@ class GridRenderer {
         else if (cell.type === "mud")      this.ctx.fillStyle = "rgba(146,64,14,0.32)";
         else                               this.ctx.fillStyle = "transparent";
 
+        // Glow effect for active traversal cells
+        if (cell.type === "visiting") {
+          this.ctx.shadowColor = "rgba(245, 158, 11, 0.85)";
+          this.ctx.shadowBlur  = 10;
+        } else if (cell.type === "path") {
+          this.ctx.shadowColor = "rgba(16, 185, 129, 0.95)";
+          this.ctx.shadowBlur  = 14;
+        } else {
+          this.ctx.shadowColor = "transparent";
+          this.ctx.shadowBlur  = 0;
+        }
         this.ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+        // Always reset shadow to avoid bleed onto subsequent cells
+        this.ctx.shadowColor = "transparent";
+        this.ctx.shadowBlur  = 0;
 
         // Grid cell outline (very faint white on dark bg).
         this.ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";

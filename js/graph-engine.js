@@ -190,8 +190,14 @@ class GraphEngine {
       };
 
       createTreeNode(1, padding, width - padding, padding);
+      // Find leaf nodes (degree 1, excluding root) for a more interesting target
+      const deg = new Array(this.nodes.length).fill(0);
+      this.edges.forEach(e => { deg[e.source]++; deg[e.target]++; });
+      const leaves = this.nodes.filter(n => deg[n.id] === 1 && n.id !== 0).map(n => n.id);
       this.startNodeId = 0;
-      this.targetNodeId = this.nodes.length - 1;
+      this.targetNodeId = leaves.length > 0
+        ? leaves[Math.floor(Math.random() * leaves.length)]
+        : this.nodes.length - 1;
       this.resetGraphState();
       return;
     }
@@ -247,52 +253,98 @@ class GraphEngine {
       return;
     }
 
-    // ---- Default / random preset: circular placement + probabilistic edges ----
-    // More nodes + start/target on opposite sides + biased weights so weighted
-    // algorithms (Dijkstra, A*) don't just look like BFS.
-    const count = Math.max(8, Math.min(14, nodeCount));
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) / 2 - padding;
+    // ---- Default / random preset: force-directed organic layout ----
+    // Nodes placed randomly then spread via repulsion, connected by a spanning
+    // tree + proximity edges. Start/target are the two spatially farthest nodes.
+    const count = Math.max(6, Math.min(16, nodeCount));
 
+    // 1. Random initial placement inside canvas bounds
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * 2 * Math.PI - Math.PI / 2;   // start at 12 o'clock
-      const jitterR = 0.82 + Math.random() * 0.32;              // slight radius jitter → non-circular
-      const jitterA = (Math.random() - 0.5) * 0.12;             // slight angle jitter
-      const x = centerX + radius * jitterR * Math.cos(angle + jitterA);
-      const y = centerY + radius * jitterR * Math.sin(angle + jitterA);
+      const x = padding + Math.random() * (width  - 2 * padding);
+      const y = padding + Math.random() * (height - 2 * padding);
       this.addNode(Math.round(x), Math.round(y), String.fromCharCode(65 + (i % 26)));
     }
 
-    // Guarantee connectedness via a ring (with larger random weight range so
-    // the shortest path isn't trivially the ring direction).
-    for (let i = 0; i < count; i++) {
-      const next = (i + 1) % count;
-      const ringW = Math.floor(Math.random() * 14) + 3;          // 3..16
-      this.addEdge(i, next, ringW);
+    // 2. Repulsion pass: iteratively push nodes apart until well-spread
+    const minSep = 78;
+    for (let iter = 0; iter < 35; iter++) {
+      for (let i = 0; i < count; i++) {
+        for (let j = i + 1; j < count; j++) {
+          const ni = this.nodes[i], nj = this.nodes[j];
+          const dx = (ni.x - nj.x) || 0.01;
+          const dy = (ni.y - nj.y) || 0.01;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < minSep) {
+            const push = ((minSep - dist) / minSep) * 0.45;
+            const fx = (dx / dist) * push * minSep * 0.5;
+            const fy = (dy / dist) * push * minSep * 0.5;
+            ni.x = Math.max(padding, Math.min(width  - padding, ni.x + fx));
+            ni.y = Math.max(padding, Math.min(height - padding, ni.y + fy));
+            nj.x = Math.max(padding, Math.min(width  - padding, nj.x - fx));
+            nj.y = Math.max(padding, Math.min(height - padding, nj.y - fy));
+          }
+        }
+      }
+    }
+    this.nodes.forEach(n => { n.x = Math.round(n.x); n.y = Math.round(n.y); });
+
+    // 3. Random spanning tree via insertion order (guarantees connectivity)
+    const order = [...Array(count).keys()].sort(() => Math.random() - 0.5);
+    for (let i = 1; i < count; i++) {
+      const a = order[i];
+      const b = order[Math.floor(Math.random() * i)];
+      const w = Math.floor(Math.random() * 12) + 1;
+      this.addEdge(a, b, w);
     }
 
-    // Chord edges: denser at short distances (8..15%), some long-range chords
-    // with larger weights so Dijkstra has to choose between fast-short and slow-long.
+    // 4. Proximity-based bonus edges for visual richness
     for (let i = 0; i < count; i++) {
-      for (let j = i + 2; j < count; j++) {
-        if (i === 0 && j === count - 1) continue;                // ring already covers
-        const dist = Math.min(j - i, count - (j - i));
-        const p = dist <= 2 ? 0.55 : dist <= 4 ? 0.22 : 0.08;
+      for (let j = i + 1; j < count; j++) {
+        const ni = this.nodes[i], nj = this.nodes[j];
+        const d = Math.sqrt((ni.x - nj.x) ** 2 + (ni.y - nj.y) ** 2);
+        const p = d < 100 ? 0.55 : d < 160 ? 0.28 : d < 220 ? 0.10 : 0.02;
         if (Math.random() < p) {
-          // Biased weight: short chords = light/cheap, long chords = heavy/expensive
-          const baseW = 2 + dist * 2;
-          const w = baseW + Math.floor(Math.random() * 8);
+          const w = Math.max(1, Math.round(d / 20) + Math.floor(Math.random() * 6));
           this.addEdge(i, j, w);
         }
       }
     }
 
-    // Start at 12 o'clock (node 0), target opposite side so paths are long
-    // enough that BFS / Dijkstra / A* meaningfully differ.
+    // 5. Start/target = the two spatially farthest nodes so all algorithms
+    //    traverse meaningful portions of the graph.
+    let maxD = -1;
     this.startNodeId = 0;
     this.targetNodeId = Math.floor(count / 2);
+    for (let i = 0; i < count; i++) {
+      for (let j = i + 1; j < count; j++) {
+        const ni = this.nodes[i], nj = this.nodes[j];
+        const d = Math.sqrt((ni.x - nj.x) ** 2 + (ni.y - nj.y) ** 2);
+        if (d > maxD) { maxD = d; this.startNodeId = i; this.targetNodeId = j; }
+      }
+    }
     this.resetGraphState();
+  }
+
+  /**
+   * Set the designated start node by ID and reset algorithm state.
+   * Called when the user clicks a node in the graph renderer.
+   */
+  setStartNode(id) {
+    if (this.nodes.find(n => n.id === id)) {
+      this.startNodeId = id;
+      this.resetGraphState();
+    }
+  }
+
+  /**
+   * Set the designated target node by ID and reset algorithm state.
+   * Called when the user shift-clicks a node in the graph renderer.
+   */
+  setTargetNode(id) {
+    if (this.nodes.find(n => n.id === id)) {
+      this.targetNodeId = id;
+      this.resetGraphState();
+    }
   }
 
   // ================================================================

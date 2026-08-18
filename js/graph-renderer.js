@@ -57,12 +57,42 @@ class GraphRenderer {
 
     marker.appendChild(path);
     defs.appendChild(marker);
+
+    // Glow filter — visiting nodes (amber pulse)
+    const mkFilter = (id, blur) => {
+      const f = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+      f.setAttribute("id", id);
+      f.setAttribute("x", "-50%"); f.setAttribute("y", "-50%");
+      f.setAttribute("width", "200%"); f.setAttribute("height", "200%");
+      const fe = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
+      fe.setAttribute("in", "SourceGraphic"); fe.setAttribute("stdDeviation", String(blur)); fe.setAttribute("result", "blur");
+      const merge = document.createElementNS("http://www.w3.org/2000/svg", "feMerge");
+      const n1 = document.createElementNS("http://www.w3.org/2000/svg", "feMergeNode"); n1.setAttribute("in", "blur");
+      const n2 = document.createElementNS("http://www.w3.org/2000/svg", "feMergeNode"); n2.setAttribute("in", "SourceGraphic");
+      merge.appendChild(n1); merge.appendChild(n2);
+      f.appendChild(fe); f.appendChild(merge);
+      return f;
+    };
+    defs.appendChild(mkFilter("glow-visiting", 4));
+    defs.appendChild(mkFilter("glow-path",     6));
+
     this.svg.appendChild(defs);
 
     this.edgesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     this.edgesGroup.setAttribute("id", "edges-layer");
     this.nodesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     this.nodesGroup.setAttribute("id", "nodes-layer");
+
+    // Static hint text for click-to-select interaction
+    const hint = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    hint.setAttribute("x", "300"); hint.setAttribute("y", "314");
+    hint.setAttribute("text-anchor", "middle");
+    hint.setAttribute("fill", "rgba(255,255,255,0.20)");
+    hint.setAttribute("font-size", "9");
+    hint.setAttribute("font-family", "Inter, system-ui, sans-serif");
+    hint.setAttribute("pointer-events", "none");
+    hint.textContent = "Click node → Set Start  |  Shift+Click → Set Target  |  Drag to reposition";
+    this.svg.appendChild(hint);
 
     this.svg.appendChild(this.edgesGroup);
     this.svg.appendChild(this.nodesGroup);
@@ -129,6 +159,7 @@ class GraphRenderer {
       line.setAttribute("stroke", strokeColor);
       line.setAttribute("stroke-width", strokeWidth);
       if (edge.directed) line.setAttribute("marker-end", "url(#arrowhead)");
+      if (edge.status === "path" || edge.status === "mst") line.setAttribute("filter", "url(#glow-path)");
 
       group.appendChild(line);
 
@@ -186,6 +217,10 @@ class GraphRenderer {
       circle.setAttribute("stroke", strokeColor);
       circle.setAttribute("stroke-width", strokeWidth);
 
+      // Apply SVG glow filter for active node states
+      if      (node.status === "visiting") circle.setAttribute("filter", "url(#glow-visiting)");
+      else if (node.status === "path")     circle.setAttribute("filter", "url(#glow-path)");
+
       const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
       label.setAttribute("x", node.x);
       label.setAttribute("y", node.y);
@@ -223,8 +258,12 @@ class GraphRenderer {
       group.appendChild(circle);
       group.appendChild(label);
 
-      // Drag hook: record offset so dragging feels natural even if you grab near an edge.
+      // Drag + click handler.
+      // Movement < 6px on mouseup = click (set start/target).
+      // Movement >= 6px = drag (reposition).
+      let _downX = 0, _downY = 0;
       group.addEventListener("mousedown", (e) => {
+        _downX = e.clientX; _downY = e.clientY;
         this.draggedNode = node;
         const rect   = this.svg.getBoundingClientRect();
         const scaleX = 600 / rect.width;
@@ -232,6 +271,25 @@ class GraphRenderer {
         const mouseX = (e.clientX - rect.left) * scaleX;
         const mouseY = (e.clientY - rect.top)  * scaleY;
         this.dragOffset = { x: mouseX - node.x, y: mouseY - node.y };
+        e.stopPropagation();
+      });
+      group.addEventListener("mouseup", (e) => {
+        const moved = Math.hypot(e.clientX - _downX, e.clientY - _downY);
+        if (moved < 6) {
+          // Treat as click: shift = set target, plain = set start
+          if (e.shiftKey) {
+            if (node.id !== this.engine.startNodeId) {
+              this.engine.setTargetNode(node.id);
+              this.render();
+            }
+          } else {
+            if (node.id !== this.engine.targetNodeId) {
+              this.engine.setStartNode(node.id);
+              this.render();
+            }
+          }
+        }
+        e.stopPropagation();
       });
 
       this.nodesGroup.appendChild(group);
