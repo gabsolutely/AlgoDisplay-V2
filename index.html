@@ -275,7 +275,7 @@
                                 </label>
                             </div>
                             <button id="share-btn" class="btn btn-info" title="Copy shareable URL">Share</button>
-                            <button id="complexity-btn" class="btn btn-secondary" title="Toggle Complexity Overlay">Cx</button>
+                            <button id="complexity-btn" class="btn btn-secondary" title="Toggle Complexity Overlay">📈</button>
                             <button id="help-btn" class="btn btn-secondary" title="Help">?</button>
                         </div>
                     </div>
@@ -294,36 +294,36 @@
                 <div id="help-panel" class="help-panel" style="display: none;">
                     <div class="help-tabs">
                         <button class="help-tab active" data-tab="sort-search">Sort / Search</button>
-                        <button class="help-tab" data-tab="graph">Graph</button>
-                        <button class="help-tab" data-tab="grid">Grid / Maze</button>
-                        <button class="help-tab" data-tab="colors">Colors</button>
+                        <button class="help-tab" data-tab="graph">Graph &amp; Tree</button>
+                        <button class="help-tab" data-tab="grid">Grid / Terrain</button>
+                        <button class="help-tab" data-tab="colors">Colors &amp; Shortcuts</button>
                     </div>
 
                     <!-- Sort / Search Tab -->
                     <div id="help-tab-sort-search" class="help-tab-content">
                         <div class="help-section">
                             <h4>JavaScript API (Sort &amp; Search)</h4>
-                            <pre><code>await compare(i, j)      // Compare arr[i] vs arr[j] — red glow
-await swap(arr, i, j)    // Swap arr[i] ↔ arr[j] — orange glow
-await renderArray(arr)   // Re-render the bar chart
-await markFound(index)   // Mark element as found — green pulse
-await sleep(ms)          // Manual delay
-log("message")           // Append to execution log</code></pre>
+                            <pre><code>await compare(i, j)      // Highlight and compare arr[i] vs arr[j]
+await swap(arr, i, j)    // Swap arr[i] and arr[j] with animation
+await renderArray(arr)   // Re-render the array bars
+await markFound(index)   // Mark matching element as found
+await sleep(ms)          // Pause execution
+log("message")           // Output message to console log</code></pre>
                         </div>
                         <div class="help-section">
-                            <h4>Python API (Sort &amp; Search only)</h4>
-                            <div class="help-note">⚠️ Python is only available for Sorting and Searching categories.</div>
-                            <pre><code>async def sort(arr):          # Must use this signature for Sort
-async def search(arr, target): # Must use this signature for Search
+                            <h4>Python API (Pyodide WebAssembly)</h4>
+                            <div class="help-note">Python is supported for Sorting and Searching categories.</div>
+                            <pre><code>async def sort(arr):           # Required signature for sorting
+async def search(arr, target):  # Required signature for searching
 
-await compare(i, j)       # Compare — red glow
-await swap(arr, i, j)     # Swap — orange glow
-await render_array(arr)   # Re-render
-await mark_found(index)   # Found — green pulse
-log("message")            # Execution log</code></pre>
+await compare(i, j)        # Compare indices i and j
+await swap(arr, i, j)      # Swap indices i and j
+await render_array(arr)    # Re-render array
+await mark_found(index)    # Mark target element
+log("message")             # Output to console log</code></pre>
                         </div>
                         <div class="help-section">
-                            <h4>Example: Bubble Sort (JS)</h4>
+                            <h4>Example: Bubble Sort (JavaScript)</h4>
                             <pre><code>for (let i = 0; i &lt; arr.length - 1; i++) {
   for (let j = 0; j &lt; arr.length - i - 1; j++) {
     await compare(j, j + 1);
@@ -338,22 +338,29 @@ log("message")            # Execution log</code></pre>
                     <!-- Graph Tab -->
                     <div id="help-tab-graph" class="help-tab-content" style="display:none;">
                         <div class="help-section">
-                            <h4>Graph API (JavaScript only)</h4>
-                            <div class="help-note">⚠️ Graph algorithms only support JavaScript.</div>
-                            <pre><code>const nodes = getNodes()         // [ {id, label, x, y, status} ]
-const start = getStartNode()     // Green node
-const target = getTargetNode()   // Red node
-const nbrs = getNeighbors(id)    // [ {id, weight} ] outgoing edges
-
-await visitNode(id, "visiting")  // Highlight node — orange
-await visitNode(id, "visited")   // Mark visited — teal
-await visitEdge(from, to)        // Highlight edge
-await updateDistance(id, d)      // Update distance label
-await markPath([id1, id2, ...])  // Highlight final path — green
-log("message")                   // Execution log</code></pre>
+                            <h4>Graph Controls &amp; Interaction</h4>
+                            <pre><code>- Left-Click node: Set Start Node (marked in green with 'S' badge)
+- Right-Click or Shift+Click node: Set Target Node (marked in red with 'T' badge)
+- Drag node: Freely reposition any node across the canvas
+- New Graph: Generates an organic force-directed layout
+- Presets: Random Graph, Binary Tree, Directed DAG, Negative Weights</code></pre>
                         </div>
                         <div class="help-section">
-                            <h4>Example: BFS</h4>
+                            <h4>Graph API (JavaScript)</h4>
+                            <pre><code>const nodes = getNodes()          // Array of all { id, label, x, y, status }
+const start = getStartNode()      // Designated start node (S)
+const target = getTargetNode()    // Designated target node (T)
+const nbrs = getNeighbors(id)     // Array of [{ id, weight }] outgoing edges
+
+await visitNode(id, "visiting")   // Highlight node (amber glow)
+await visitNode(id, "visited")    // Mark node as visited (purple)
+await visitEdge(from, to)         // Highlight edge traversal
+await updateDistance(id, d)       // Display distance badge on node
+await markPath([id1, id2, ...])   // Highlight optimal path (nodes + edges glow green)
+log("message")                    // Output to execution log</code></pre>
+                        </div>
+                        <div class="help-section">
+                            <h4>Example: Graph BFS</h4>
                             <pre><code>const start = getStartNode();
 const target = getTargetNode();
 const queue = [start.id];
@@ -381,72 +388,56 @@ while (queue.length &gt; 0) {
                     <!-- Grid Tab -->
                     <div id="help-tab-grid" class="help-tab-content" style="display:none;">
                         <div class="help-section">
-                            <h4>Grid API (JavaScript only)</h4>
-                            <div class="help-note">⚠️ Grid algorithms only support JavaScript.</div>
-                            <pre><code>const s = getStartCell()          // { row, col }
-const t = getTargetCell()          // { row, col }
-const nbrs = getGridNeighbors(r, c) // [ {row, col, weight, terrain} ]
-  // Filters out walls automatically. Terrain weights:
-  //   empty=1, grass=2, sand=4, mud=8
-
-await visitGridCell(r, c, "visiting")  // Orange highlight
-await visitGridCell(r, c, "path")      // Green path
-log("message")                          // Execution log</code></pre>
+                            <h4>Grid Terrain &amp; Values Guide</h4>
+                            <pre><code>- 'S' Badge: Start Cell (drag to move)
+- 'T' Badge: Target Cell (drag to move)
+- Dark Slate Cells: Impassable Walls (click/drag to draw or erase)
+- Grass '*2': Terrain movement weight multiplier = 2x
+- Sand '*4': Terrain movement weight multiplier = 4x
+- Mud '*8': Terrain movement weight multiplier = 8x
+- Dijkstra and A* pathfinding route around mud and sand to minimize total cost.
+- Unweighted BFS treats all open cells as equal cost (1).</code></pre>
                         </div>
                         <div class="help-section">
-                            <h4>Example: Grid BFS</h4>
-                            <pre><code>const start = getStartCell();
-const target = getTargetCell();
-const queue = [start];
-const visited = new Set([`${start.row},${start.col}`]);
-const parent = {};
+                            <h4>Grid API (JavaScript)</h4>
+                            <pre><code>const start = getStartCell()           // { row, col }
+const target = getTargetCell()         // { row, col }
+const nbrs = getGridNeighbors(r, c)    // Array of [{ row, col, weight, terrain }]
 
-while (queue.length &gt; 0) {
-  const cur = queue.shift();
-  await visitGridCell(cur.row, cur.col, "visiting");
-  if (cur.row === target.row &amp;&amp; cur.col === target.col) {
-    let p = cur;
-    while (p) {
-      await visitGridCell(p.row, p.col, "path");
-      p = parent[`${p.row},${p.col}`];
-    }
-    return;
-  }
-  for (const n of getGridNeighbors(cur.row, cur.col)) {
-    const k = `${n.row},${n.col}`;
-    if (!visited.has(k)) {
-      visited.add(k); parent[k] = cur;
-      queue.push(n);
-    }
-  }
-}</code></pre>
+await visitGridCell(r, c, "visiting")  // Wavefront exploration (amber glow)
+await visitGridCell(r, c, "path")      // Instantly highlights cell on final path (green)
+log("message")                         // Output to execution log</code></pre>
                         </div>
                         <div class="help-section">
-                            <h4>Grid Tips</h4>
-                            <pre><code>// Click/drag to draw walls
-// Drag the S (start) or T (target) to reposition them
-// Use 🌀 Maze to generate a recursive backtracking maze
-// Use Clear Walls to erase all walls
-// Grid size: Small / Medium / Large in the toolbar</code></pre>
+                            <h4>Grid Controls</h4>
+                            <pre><code>- Click/drag empty cell: Draw walls
+- Click/drag wall cell: Erase walls
+- Drag 'S' or 'T': Reposition start or target point
+- Maze button: Generates recursive backtracking maze
+- Clear Walls button: Clears all walls while preserving terrain</code></pre>
                         </div>
                     </div>
 
-                    <!-- Colors Tab -->
+                    <!-- Colors & Shortcuts Tab -->
                     <div id="help-tab-colors" class="help-tab-content" style="display:none;">
                         <h4>Color Guide</h4>
                         <div class="help-colors">
-                            <div class="color-item color-blue">🔵 Blue — Normal / Default</div>
-                            <div class="color-item color-red">🔴 Red — Comparing</div>
-                            <div class="color-item color-orange">🟠 Orange — Swapping / Visiting</div>
-                            <div class="color-item color-green">🟢 Green — Sorted / Found / Path</div>
-                            <div class="color-item color-teal"> 🟣 Purple — Visited (graph/grid)</div>
-                            <div class="color-item color-purple">🟣 Purple (Array) — Algorithm B (Race Mode)</div>
+                            <div class="color-item color-blue">🔵 Blue — Default / Unvisited</div>
+                            <div class="color-item color-red">🔴 Red — Comparing / Target Node</div>
+                            <div class="color-item color-orange">🟠 Orange — Visiting Active Wavefront</div>
+                            <div class="color-item color-green">🟢 Green — Sorted / Start Node / Final Path</div>
+                            <div class="color-item color-teal">🟣 Purple — Visited (Graph / Grid)</div>
+                            <div class="color-item color-purple">🟣 Purple (Array) — Side B Algorithm (Race Mode)</div>
                         </div>
-                        <h4 style="margin-top:12px;">Keyboard Shortcuts</h4>
+                        <h4 style="margin-top:12px;">Keyboard Shortcuts &amp; Toolbar Controls</h4>
                         <div class="help-colors">
-                            <div class="color-item">Ctrl+Enter — Run</div>
-                            <div class="color-item">Ctrl+R — Generate</div>
-                            <div class="color-item">Ctrl+L — Clear</div>
+                            <div class="color-item">Ctrl + Enter — Run Algorithm</div>
+                            <div class="color-item">Ctrl + R — Generate New Dataset</div>
+                            <div class="color-item">Ctrl + L — Clear Canvas &amp; Logs</div>
+                            <div class="color-item">Spacebar — Pause / Resume</div>
+                            <div class="color-item">Share Button — Copies URL with state and custom code</div>
+                            <div class="color-item">📈 Button — Toggle Live Complexity Chart</div>
+                            <div class="color-item">Step Back / Forward — Snapshot Time Travel (Undo / Redo)</div>
                         </div>
                     </div>
                 </div>
