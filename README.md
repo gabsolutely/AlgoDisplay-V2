@@ -174,3 +174,17 @@ npx serve .
 # Or with Python
 python -m http.server 8000
 ```
+
+---
+
+## License
+
+AlgoDisplay V2 is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+You may use, study, modify, and build upon this project for permitted noncommercial purposes, subject to the terms of the license.
+
+**Commercial use is not permitted under this license.**
+
+See the [`LICENSE`](./LICENSE) file for the complete license terms.
+
+**Copyright © 2026 gabsolutely.**
