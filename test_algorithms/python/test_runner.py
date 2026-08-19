@@ -174,25 +174,37 @@ class AlgorithmTester:
         print('Starting AlgoDisplay Python Algorithm Tests...\n')
 
         # Import algorithm functions
-        from bubble_sort import bubble_sort, optimized_bubble_sort, bubble_sort_with_stats
-        from selection_sort import selection_sort, selection_sort_with_stats, selection_sort_with_min_tracking
-        from insertion_sort import insertion_sort, insertion_sort_with_logging, binary_insertion_sort, insertion_sort_with_stats
+        from bubble_sort import bubble_sort, optimized_bubble_sort, bubble_sort_with_stats, early_exit_bubble_sort
+        from selection_sort import selection_sort, selection_sort_with_stats, selection_sort_with_min_tracking as min_tracking_selection_sort, bidirectional_selection_sort
+        from insertion_sort import insertion_sort, insertion_sort_with_logging, binary_insertion_sort, insertion_sort_with_stats, two_way_insertion_sort
         from merge_sort import merge_sort, bottom_up_merge_sort, in_place_merge_sort, merge_sort_with_logging, natural_merge_sort, merge_sort_with_stats
         from quick_sort import quick_sort, randomized_quick_sort, median_of_three_quick_sort, iterative_quick_sort, quick_sort_with_stats, three_way_quick_sort, tail_call_quick_sort, hybrid_quick_sort
-        from heap_sort import heap_sort, heap_sort_with_logging, min_heap_sort, heap_sort_with_stats, iterative_heap_sort, bottom_up_heap_sort
+        from heap_sort import (
+            heap_sort, heap_sort_with_logging, min_heap_sort,
+            heap_sort_with_stats, iterative_heap_sort, bottom_up_heap_sort
+        )
+        from shell_sort import shell_sort, knuth_shell_sort
+        from cocktail_sort import cocktail_sort
+        from counting_sort import counting_sort
+        from radix_sort import radix_sort
 
         algorithms = [
             # Basic Sorting Algorithms
             ('Bubble Sort', bubble_sort),
             ('Optimized Bubble Sort', optimized_bubble_sort),
             ('Bubble Sort with Stats', bubble_sort_with_stats),
+            ('Early Exit Bubble Sort', early_exit_bubble_sort),
+            
             ('Selection Sort', selection_sort),
             ('Selection Sort with Stats', selection_sort_with_stats),
-            ('Selection Sort with Min Tracking', selection_sort_with_min_tracking),
+            ('Minimum Tracking Selection Sort', min_tracking_selection_sort),
+            ('Bidirectional Selection Sort', bidirectional_selection_sort),
+            
             ('Insertion Sort', insertion_sort),
             ('Insertion Sort with Logging', insertion_sort_with_logging),
             ('Binary Insertion Sort', binary_insertion_sort),
             ('Insertion Sort with Stats', insertion_sort_with_stats),
+            ('Two-Way Insertion Sort', two_way_insertion_sort),
             
             # Advanced Sorting Algorithms
             ('Merge Sort', merge_sort),
@@ -217,6 +229,12 @@ class AlgorithmTester:
             ('Heap Sort with Stats', heap_sort_with_stats),
             ('Iterative Heap Sort', iterative_heap_sort),
             ('Bottom-up Heap Sort', bottom_up_heap_sort),
+
+            ('Shell Sort', shell_sort),
+            ('Knuth Shell Sort', knuth_shell_sort),
+            ('Cocktail Shaker Sort', cocktail_sort),
+            ('Counting Sort', counting_sort),
+            ('Radix Sort (LSD)', radix_sort),
         ]
 
         all_results = []
