@@ -1,271 +1,104 @@
 # AlgoDisplay Test Suite
 
-A comprehensive testing framework for the AlgoDisplay algorithm visualization platform. This test suite validates algorithm implementations in both JavaScript and Python, ensuring correctness, performance, and compatibility with the AlgoDisplay visualization API.
+A testing and benchmarking framework for the AlgoDisplay algorithm visualization platform. This test suite validates algorithm implementations across JavaScript and Python, covering sorting, searching, graph traversal, and grid pathfinding.
 
 ## Structure
 
 ```
 test_algorithms/
-├── javascript/              # JavaScript algorithm tests
-│   ├── bubble-sort.js       # Bubble sort implementations
-│   ├── selection-sort.js    # Selection sort implementations
-│   ├── insertion-sort.js    # Insertion sort implementations
-│   ├── test-runner.js       # JavaScript test framework
-│   └── benchmark.js         # Performance benchmarking
-├── python/                  # Python algorithm tests
-│   ├── bubble_sort.py       # Bubble sort implementations
-│   ├── selection_sort.py    # Selection sort implementations
-│   ├── insertion_sort.py    # Insertion sort implementations
-│   ├── test_runner.py       # Python test framework
-│   └── benchmark.py         # Performance benchmarking
-├── shared/                  # Shared utilities and data
-│   ├── test_data.js         # Common test cases
-│   ├── test_data.py         # Common test cases (Python)
-│   └── utils.js             # Utility functions
-├── package.json             # Node.js configuration
-└── README.md                # This file
+├── javascript/                  # JavaScript algorithm test implementations
+│   ├── bubble-sort.js           # Bubble Sort variants
+│   ├── selection-sort.js        # Selection Sort variants
+│   ├── insertion-sort.js        # Insertion Sort variants
+│   ├── merge-sort.js            # Merge Sort variants
+│   ├── quick-sort.js            # Quick Sort variants
+│   ├── heap-sort.js             # Heap Sort variants
+│   ├── shell-sort.js            # Shell Sort variants
+│   ├── cocktail-sort.js         # Cocktail Shaker Sort
+│   ├── counting-sort.js         # Counting Sort
+│   ├── radix-sort.js            # Radix Sort (LSD)
+│   ├── search-algorithms.js     # Linear, Binary, Interpolation, Exponential, Ternary Search
+│   ├── graph-algorithms.js      # BFS, DFS, Dijkstra, A*, Bellman-Ford, Prim, Kruskal, TopoSort
+│   ├── grid-algorithms.js       # Grid BFS, DFS, Dijkstra, A*
+│   ├── test-runner.js           # Main JavaScript test runner
+│   └── benchmark.js             # Performance benchmarking
+├── python/                      # Python algorithm test implementations
+│   ├── bubble_sort.py           # Bubble Sort variants
+│   ├── selection_sort.py        # Selection Sort variants
+│   ├── insertion_sort.py        # Insertion Sort variants
+│   ├── merge_sort.py            # Merge Sort variants
+│   ├── quick_sort.py            # Quick Sort variants
+│   ├── heap_sort.py             # Heap Sort variants
+│   ├── shell_sort.py            # Shell Sort variants
+│   ├── cocktail_sort.py         # Cocktail Shaker Sort
+│   ├── counting_sort.py         # Counting Sort
+│   ├── radix_sort.py            # Radix Sort (LSD)
+│   ├── search_algorithms.py     # Search algorithms in Python
+│   ├── test_runner.py           # Main Python test runner
+│   └── benchmark.py             # Python benchmarks
+├── shared/                      # Shared test datasets
+│   ├── test_data.js             # Common JavaScript test datasets
+│   └── test_data.py             # Common Python test datasets
+├── package.json                 # Node.js test configuration
+└── README.md                    # Test suite documentation
 ```
 
-## Features
+## Supported Algorithms Tested
 
-### Algorithm Implementations
-- **Bubble Sort**: Standard, optimized, and statistics-tracking versions
-- **Selection Sort**: Standard, with statistics, and with minimum tracking
-- **Insertion Sort**: Standard, with logging, binary search, and statistics versions
+### 1. Sorting Algorithms
+- Bubble Sort (Standard, Optimized, Early Exit)
+- Selection Sort (Standard, Minimum Tracking, Bidirectional)
+- Insertion Sort (Standard, Binary Insertion, Two-Way)
+- Merge Sort (Top-Down, Bottom-Up, In-Place)
+- Quick Sort (Lomuto, Randomized, Median-of-Three, Three-Way, Iterative)
+- Heap Sort (Max Heap, Min Heap, Iterative, Bottom-Up)
+- Shell Sort (Standard, Knuth Sequence)
+- Cocktail Shaker Sort
+- Counting Sort
+- Radix Sort (Least Significant Digit)
 
-### Testing Capabilities
-- **Functional Testing**: Verifies algorithm correctness across multiple test cases
-- **Performance Benchmarking**: Measures execution time, comparisons, and swaps
-- **API Compatibility**: Ensures proper usage of AlgoDisplay visualization functions
-- **Cross-Language Validation**: Compares JavaScript and Python implementations
+### 2. Searching Algorithms
+- Linear Search
+- Binary Search
+- Interpolation Search
+- Exponential Search
+- Ternary Search
 
-### Test Cases
-- Empty arrays
-- Single-element arrays
-- Already sorted arrays
-- Reverse sorted arrays
-- Random arrays with duplicates
-- Arrays with all equal elements
-- Nearly sorted arrays
+### 3. Graph Algorithms
+- Breadth-First Search (BFS)
+- Depth-First Search (DFS)
+- Dijkstra's Shortest Path
+- A* Search (Heuristic Shortest Path)
+- Bellman-Ford Algorithm
+- Prim's Minimum Spanning Tree (MST)
+- Kruskal's Minimum Spanning Tree (MST)
+- Topological Sort (Kahn's Algorithm for DAGs)
 
-## Quick Start
+### 4. Grid Pathfinding
+- Grid BFS
+- Grid DFS
+- Grid Dijkstra (Terrain cost-aware)
+- Grid A* Search (Manhattan distance heuristic)
+
+## Running Tests
 
 ### JavaScript Tests
-
 ```bash
-# Install Node.js dependencies (if any)
-npm install
+# Run JavaScript test suite
+node test_algorithms/javascript/test-runner.js
 
-# Run all JavaScript tests
-npm run test:js
+# Run search tests
+node test_algorithms/javascript/search-test.js
 
-# Run JavaScript benchmarks
-npm run benchmark
+# Run benchmarks
+node test_algorithms/javascript/benchmark.js
 ```
 
 ### Python Tests
-
 ```bash
-# Run all Python tests
-npm run test:python
+# Run Python test runner
+python test_algorithms/python/test_runner.py
 
 # Run Python benchmarks
-npm run benchmark:python
+python test_algorithms/python/benchmark.py
 ```
-
-### All Tests
-
-```bash
-# Run both JavaScript and Python tests
-npm run test:all
-```
-
-## Algorithm Implementation Guidelines
-
-### JavaScript Format
-```javascript
-async function algorithmName(arr) {
-    // Use AlgoDisplay visualization functions
-    await compare(i, j);
-    await swap(arr, i, j);
-    await renderArray(arr);
-    await sleep(ms);
-    log("message");
-}
-```
-
-### Python Format
-```python
-async def algorithm_name(arr):
-    # Use AlgoDisplay visualization functions
-    await compare(i, j)
-    await swap(arr, i, j)
-    await render_array(arr)
-    await sleep(ms)
-    log("message")
-```
-
-### Required Functions
-- `compare(i, j)`: Highlight elements for comparison
-- `swap(arr, i, j)`: Swap elements with animation
-- `renderArray(arr)` / `render_array(arr)`: Re-render the array
-- `sleep(ms)`: Pause execution
-- `log(message)`: Log messages
-
-## Test Framework Features
-
-### Mock Visualization Functions
-The test framework provides mock implementations of all AlgoDisplay visualization functions:
-- Tracks function calls and statistics
-- Validates proper async/await usage
-- Measures performance metrics
-- Captures log messages
-
-### Automated Test Execution
-- Runs comprehensive test suites automatically
-- Generates detailed performance reports
-- Validates algorithm correctness
-- Provides success/failure summaries
-
-### Performance Benchmarking
-- Measures execution time across different array sizes
-- Tracks comparison and swap counts
-- Compares algorithm efficiency
-- Generates performance charts and tables
-
-## Adding New Algorithms
-
-### 1. Create Algorithm File
-Create a new file in the appropriate language directory:
-
-```javascript
-// javascript/new-algorithm.js
-async function newAlgorithm(arr) {
-    // Implementation here
-    await compare(i, j);
-    await swap(arr, i, j);
-}
-
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { newAlgorithm };
-}
-```
-
-```python
-# python/new_algorithm.py
-async def new_algorithm(arr):
-    # Implementation here
-    await compare(i, j)
-    await swap(arr, i, j)
-```
-
-### 2. Add to Test Runner
-Import and include the new algorithm in the test runner:
-
-```javascript
-// javascript/test-runner.js
-const { newAlgorithm } = require('./new-algorithm.js');
-
-const algorithms = [
-    // ... existing algorithms
-    { name: 'New Algorithm', func: newAlgorithm }
-];
-```
-
-```python
-# python/test_runner.py
-from new_algorithm import new_algorithm
-
-algorithms = [
-    # ... existing algorithms
-    ('New Algorithm', new_algorithm),
-]
-```
-
-### 3. Run Tests
-Execute the test suite to validate the new implementation.
-
-## Performance Analysis
-
-### Metrics Tracked
-- **Execution Time**: Total algorithm runtime in milliseconds
-- **Comparisons**: Number of element comparisons performed
-- **Swaps**: Number of element exchanges executed
-- **Memory Usage**: Peak memory consumption (when available)
-- **Success Rate**: Percentage of test cases passed
-
-### Benchmark Results
-The test suite generates detailed performance reports including:
-- Time complexity analysis
-- Space complexity analysis
-- Comparative performance between algorithms
-- Scalability analysis across array sizes
-
-## Troubleshooting
-
-### Common Issues
-
-#### "Algorithm not found"
-- Ensure the algorithm file exists in the correct directory
-- Check that the algorithm is properly exported/imported
-- Verify function names match between files
-
-#### "Async function required"
-- All algorithm functions must be async
-- Use `await` before visualization function calls
-- Ensure proper async/await syntax
-
-#### "Test failed: Array not sorted"
-- Algorithm implementation may have bugs
-- Check array manipulation logic
-- Verify swap function usage
-
-#### Performance issues
-- Large test arrays may cause slow execution
-- Consider reducing array size for testing
-- Check for infinite loops
-
-### Debug Mode
-Enable detailed logging by modifying the test runner:
-```javascript
-// Set debug mode for verbose output
-const DEBUG_MODE = true;
-```
-
-```python
-# Set debug mode for verbose output
-DEBUG_MODE = True
-```
-
-## Contributing
-
-### Code Style
-- Follow the existing code style and conventions
-- Use meaningful variable and function names
-- Add comments for complex logic
-- Include proper error handling
-
-### Test Coverage
-- Ensure all edge cases are covered
-- Add comprehensive test cases
-- Validate both success and failure scenarios
-- Include performance benchmarks
-
-### Documentation
-- Update README.md with new features
-- Document algorithm implementations
-- Add usage examples
-- Include troubleshooting information
-
-## License
-
-This test suite is part of the AlgoDisplay project and follows the same license terms as the main project.
-
-## Support
-
-For issues, questions, or contributions:
-1. Check the troubleshooting section
-2. Review existing test cases
-3. Run tests with debug mode enabled
-4. Consult the main AlgoDisplay documentation
