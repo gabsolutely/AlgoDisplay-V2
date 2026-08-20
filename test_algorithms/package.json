@@ -1,7 +1,7 @@
 {
-  "name": "algodisplay-test-suite",
+  "name": "algostudio-test-suite",
   "version": "1.0.0",
-  "description": "Test suite for AlgoDisplay algorithm visualizations",
+  "description": "Test suite for AlgoStudio algorithm visualizations",
   "main": "javascript/test-runner.js",
   "scripts": {
     "test": "node javascript/test-runner.js",
@@ -22,8 +22,8 @@
     "javascript",
     "python"
   ],
-  "author": "AlgoDisplay Team",
-  "license": "MIT",
+  "author": "AlgoStudio Team",
+  "license": "PolyForm Noncommercial License 1.0.0",
   "engines": {
     "node": ">=14.0.0"
   },

@@ -1,5 +1,5 @@
 /* =============================================================
-   AlgoDisplayV2 — style.css
+   AlgoStudio — style.css
    CSS variable themes + layout + all component styling.
    Themes: :root (dark, default), [data-theme=light], [data-palette=colorblind]
    ============================================================= */
@@ -17,9 +17,13 @@
   --pad: 14px;
   --radius: 10px;
   --text: #e6eef8;
+  --card-border: rgba(255,255,255,0.06);
+  --shadow: rgba(0,0,0,0.5);
+  --scrollbar-track: #1e293b;
+  --scrollbar-thumb: #334155;
 }
 
-/* ── CSS Variables: Light theme (data-theme="light") ─────────────── */
+/* ── CSS Variables: Light theme (data-theme="light") ───────────── */
 :root[data-theme="light"] {
   --bg: #f1f5f9;
   --card: #ffffff;
@@ -28,8 +32,13 @@
   --ok: #059669;
   --danger: #e11d48;
   --warn: #d97706;
-  --glass: rgba(15, 23, 42, 0.04);
+  --glass: rgba(15, 23, 42, 0.06);
   --text: #0f172a;
+  /* Light-mode specific extras */
+  --card-border: rgba(15, 23, 42, 0.12);
+  --shadow: rgba(15, 23, 42, 0.15);
+  --scrollbar-track: #e2e8f0;
+  --scrollbar-thumb: #94a3b8;
 }
 
 /* ── CSS Variables: Colorblind palette (data-palette="colorblind") ─ */
@@ -479,23 +488,6 @@ select.btn-minimal:hover {
   box-shadow: inset 0 0 10px color-mix(in srgb, #000 20%, transparent);
 }
 
-.logs::-webkit-scrollbar {
-  width: 8px;
-}
-
-.logs::-webkit-scrollbar-track {
-  background: var(--card);
-}
-
-.logs::-webkit-scrollbar-thumb {
-  background: var(--muted);
-  border-radius: 4px;
-}
-
-.logs::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
-
 .viz-info {
   width: 200px;
   display: flex;
@@ -603,8 +595,6 @@ input[type="checkbox"] {
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
-/* Swapping position animations - REMOVED to avoid conflicts with JS transforms */
-
 .bar::after {
   content: attr(data-value);
   position: absolute;
@@ -620,8 +610,6 @@ input[type="checkbox"] {
 .bar:hover::after {
   opacity: 1;
 }
-
-/* Smooth position reset after swap */
 
 /* ── Step-Mode Next Button (shown in step mode between advances) ── */
 .step-controls-container {
@@ -1130,7 +1118,7 @@ input[type="checkbox"] {
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: linear-gradient(135deg, var(--card) 0%, color-mix(in srgb, var(--accent) 20%, var(--card)) 100%);
-  color: var(--fg);
+  color: var(--text);
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 12px 24px;
@@ -1156,8 +1144,9 @@ input[type="checkbox"] {
   bottom: 24px;
   right: 24px;
   min-width: 0;
-  max-width: 335px;
+  max-width: min(335px, 92vw);
   width: max-content;
+  max-height: 60vh;
   background: color-mix(in srgb, var(--card) 96%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: var(--radius);
@@ -1216,6 +1205,8 @@ input[type="checkbox"] {
 
 #complexity-canvas {
   display: block;
+  width: 100%;
+  height: auto;
 }
 
 .complexity-legend {
@@ -1375,10 +1366,10 @@ input[type="checkbox"] {
   gap: 8px;
 }
 
-/* ── Custom Scrollbars (thin, styled, Firefox + WebKit) ────────── */
+/* ── Custom Scrollbars (thin, themed, Firefox + WebKit) ──────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 #1e293b;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* WebKit Browsers (Chrome, Edge, Safari) */
@@ -1388,11 +1379,11 @@ input[type="checkbox"] {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -1404,4 +1395,344 @@ input[type="checkbox"] {
 /* Removes top/bottom arrow buttons */
 ::-webkit-scrollbar-button {
   display: none;
+}
+
+/* ── Light Mode: Extra Overrides ────────────────────────────── */
+[data-theme="light"] .editor-section {
+  box-shadow: 0 0 12px rgba(15, 23, 42, 0.12);
+}
+[data-theme="light"] .toolbar-card {
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  background: color-mix(in srgb, var(--card) 95%, #000 5%);
+}
+[data-theme="light"] .card-title {
+  color: var(--accent);
+}
+[data-theme="light"] .pseudocode-body {
+  background: var(--card);
+  color: var(--text);
+}
+[data-theme="light"] .pseudocode-line {
+  color: var(--muted);
+}
+[data-theme="light"] .pseudocode-line-code {
+  color: var(--text);
+}
+[data-theme="light"] .help-section pre {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+[data-theme="light"] #complexity-overlay {
+  background: rgba(255,255,255,0.97);
+  box-shadow: 0 12px 48px rgba(15,23,42,0.2);
+}
+[data-theme="light"] .logs {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+[data-theme="light"] .visualizer {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+[data-theme="light"] #code-editor {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+[data-theme="light"] .control-group {
+  color: var(--text);
+}
+
+/* ── Mobile Responsive Overhaul (max-width: 640px) ──────────── */
+@media (max-width: 640px) {
+  body {
+    padding: 8px;
+  }
+
+  /* Header */
+  .header h1, .topbar h1 {
+    font-size: 16px;
+  }
+  .subtitle {
+    font-size: 11px;
+  }
+  .social-links {
+    gap: 6px;
+  }
+  .social-link {
+    padding: 6px;
+  }
+
+  /* Toolbar cards: horizontal scroll strip */
+  .editor-controls {
+    flex-direction: row;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .editor-controls::-webkit-scrollbar { display: none; }
+  .toolbar-card {
+    min-width: 200px;
+    flex-shrink: 0;
+  }
+  .card-controls {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+  }
+
+  /* Visualizer */
+  .visualizer {
+    height: 200px !important;
+    min-height: 120px;
+  }
+  .viz-wrapper.race-mode .visualizer {
+    height: 180px !important;
+  }
+
+  /* Pseudocode */
+  .pseudocode-panel {
+    min-height: 120px;
+    max-height: 160px;
+  }
+  .pseudocode-container-wrapper {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* Controls bar */
+  .controls-section {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .control-buttons {
+    gap: 4px;
+  }
+  .control-buttons .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .control-settings label,
+  .control-settings span {
+    font-size: 12px;
+  }
+
+  /* Code editor */
+  #code-editor {
+    height: 200px;
+    font-size: 12px;
+  }
+
+  /* Stats grid */
+  #stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .info-card {
+    padding: 10px 12px;
+  }
+  .info-card h3 {
+    font-size: 13px;
+  }
+
+  /* Complexity overlay: full width on mobile */
+  #complexity-overlay {
+    right: 8px;
+    left: 8px;
+    bottom: 8px;
+    max-width: calc(100vw - 16px);
+    width: auto;
+  }
+
+  /* Hide speed label text on tiny screens */
+  .control-settings .control-group label {
+    font-size: 11px;
+  }
+}
+
+/* Tablet breakpoint improvements (641px–1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .editor-controls {
+    flex-direction: row;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .toolbar-card {
+    min-width: 220px;
+    flex-shrink: 0;
+  }
+  .visualizer {
+    height: 250px;
+  }
+}
+
+/* ── Contribution Panel ───────────────────────────────── */
+.contribute-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.contribute-btn:hover {
+  color: var(--accent);
+}
+
+.contribute-panel {
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  animation: slideDown 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.contribute-panel-inner {
+  padding: var(--pad) calc(var(--pad) * 1.2);
+}
+
+.contribute-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.contribute-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.contribute-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.contribute-card {
+  background: color-mix(in srgb, var(--card) 90%, #000 10%);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 14px 16px;
+}
+
+.contribute-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contribute-card p {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.contribute-card ul,
+.contribute-card ol {
+  margin: 0 0 10px 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.contribute-card li {
+  margin-bottom: 4px;
+}
+
+.contribute-card code {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: var(--accent);
+}
+
+.contribute-card pre {
+  background: color-mix(in srgb, var(--card) 85%, #000 15%);
+  border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--text);
+  overflow-x: auto;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.contribute-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.contribute-table th,
+.contribute-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+  color: var(--muted);
+}
+
+.contribute-table th {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contribute-table tr:last-child td {
+  border-bottom: none;
+}
+
+.contribute-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.contribute-links .btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.contribute-card a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.contribute-card a:hover {
+  text-decoration: underline;
+}
+
+/* Light mode contribution panel */
+[data-theme="light"] .contribute-card {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+[data-theme="light"] .contribute-card pre {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
 }

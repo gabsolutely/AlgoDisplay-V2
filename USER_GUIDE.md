@@ -1,7 +1,7 @@
-# AlgoDisplay V2 — User Guide & Reference Manual
+# AlgoStudio — User Guide & Reference Manual
 
 ## Overview
-AlgoDisplay is an interactive web platform for writing, debugging, testing, and visualizing algorithms in real time. It features a dual-language execution engine (native JavaScript and WebAssembly Python via Pyodide), real-time complexity monitoring, step-by-step time travel undo/redo, and interactive Web Audio sonification across four visualization modes:
+AlgoStudio is an interactive web platform for writing, debugging, testing, and visualizing algorithms in real time. It features a dual-language execution engine (native JavaScript and WebAssembly Python via Pyodide), real-time complexity monitoring, step-by-step time travel undo/redo, and interactive Web Audio sonification across four visualization modes:
 
 1. **Sorting Visualizer:** Array bars with comparison/swap animations and head-to-head dual race comparison.
 2. **Search Visualizer:** Linear, Binary, Interpolation, Exponential, and Ternary search algorithms with target highlights.
@@ -201,7 +201,7 @@ Click the **Cx** button in the Mode & View toolbar to open the live Complexity M
 
 ## Step-by-Step Snapshot Time Travel
 
-AlgoDisplay V2 captures up to 500 deep visual snapshots of the entire application state during live execution:
+AlgoStudio captures up to 500 deep visual snapshots of the entire application state during live execution:
 
 - **Step Back (Undo):** Reverts the visualizer, statistics, array, graph/grid, and pseudocode line highlight to the exact state before the previous operation.
 - **Step Forward (Redo):** Re-advances through the captured history stack.

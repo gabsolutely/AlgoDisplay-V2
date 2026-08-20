@@ -1,4 +1,4 @@
-# Shared test data for AlgoDisplay algorithm testing
+# Shared test data for AlgoStudio algorithm testing
 # This file contains common test cases and utilities
 
 from typing import List, Dict, Any, Tuple, Optional

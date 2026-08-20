@@ -1,6 +1,6 @@
-# AlgoDisplay Test Suite
+# AlgoStudio Test Suite
 
-A testing and benchmarking framework for the AlgoDisplay algorithm visualization platform. This test suite validates algorithm implementations across JavaScript and Python, covering sorting, searching, graph traversal, and grid pathfinding.
+A testing and benchmarking framework for the AlgoStudio algorithm visualization platform. This test suite validates algorithm implementations across JavaScript and Python, covering sorting, searching, graph traversal, and grid pathfinding.
 
 ## Structure
 

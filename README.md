@@ -1,4 +1,4 @@
-# AlgoDisplay V2 — Interactive Algorithm Visualizer & Studio
+# AlgoStudio — Interactive Algorithm Visualizer & Studio
 
 A modern, high-performance, fully browser-based algorithm visualizer and audio laboratory. Zero installation, zero external servers, zero build steps. Write custom JavaScript or Python algorithms and watch them animate live across 4 distinct visualization modes with real-time complexity monitoring, step-back undo/redo, and interactive Web Audio synthesis.
 
@@ -93,7 +93,7 @@ The grid canvas uses color coding, labels, and numeric multipliers:
 
 ## Sound Studio & Musical Sonification
 
-AlgoDisplay V2 features a Web Audio synthesizer that generates audio directly from mathematical frequencies:
+AlgoStudio features a Web Audio synthesizer that generates audio directly from mathematical frequencies:
 
 - **Musical Mode:** Instead of plain blips, operations trigger chords and scale notes mapped to element magnitudes or node/cell coordinates.
 - **8 Musical Scales:**
@@ -179,7 +179,7 @@ python -m http.server 8000
 
 ## License
 
-AlgoDisplay V2 is licensed under the **PolyForm Noncommercial License 1.0.0**.
+AlgoStudio is licensed under the **PolyForm Noncommercial License 1.0.0**.
 
 You may use, study, modify, and build upon this project for permitted noncommercial purposes, subject to the terms of the license.
 
