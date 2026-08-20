@@ -137,6 +137,9 @@ class AlgorithmVisualizer {
       clearWallsBtn: document.getElementById("clear-walls-btn"),
       graphNodeCountInput: document.getElementById("graph-node-count"),
       gridSizeSelect: document.getElementById("grid-size-select"),
+      contributeBtn: document.getElementById("contribute-btn"),
+      contributePanel: document.getElementById("contribute-panel"),
+      contributeClose: document.getElementById("contribute-close"),
     };
 
     console.log("Elements found:", this.validateElements());
@@ -167,7 +170,7 @@ class AlgorithmVisualizer {
 
   // ── Initialization Boot Sequence ──────────────────────────────────────
   async init() {
-    console.log("AlgoDisplay initializing...");
+    console.log("AlgoStudio initializing...");
     this.setupEventListeners();                     // Wire every button/slider/toggle/shortcut
     const loadedFromURL = this.loadFromURL();       // Restore state from ?state= share URL (if any)
     if (!loadedFromURL) {
@@ -176,7 +179,7 @@ class AlgorithmVisualizer {
     }
     this.initComplexityOverlay();                   // Create complexity chart DOM (hidden until user clicks complexity button)
 
-    console.log("AlgoDisplay ready");
+    console.log("AlgoStudio ready");
   }
 
   /**
@@ -540,6 +543,29 @@ class AlgorithmVisualizer {
         this.elements.editorExpandBtn.textContent = isExpanded ? "[-] Collapse Editor" : "[+] Expand Editor";
       };
     }
+
+    // Contribute panel toggle
+    if (this.elements.contributeBtn && this.elements.contributePanel) {
+      this.elements.contributeBtn.onclick = () => {
+        const isVisible = this.elements.contributePanel.style.display !== "none";
+        this.elements.contributePanel.style.display = isVisible ? "none" : "block";
+        if (!isVisible) {
+          this.elements.contributePanel.scrollIntoView({ behavior: 'smooth' });
+        }
+      };
+    }
+    if (this.elements.contributeClose && this.elements.contributePanel) {
+      this.elements.contributeClose.onclick = () => {
+        this.elements.contributePanel.style.display = "none";
+      };
+    }
+
+    // Window resize handler for complexity overlay chart
+    window.addEventListener('resize', window.utils?.debounce(() => {
+      if (this.complexityCanvas && this.complexityOverlay?.classList.contains('visible')) {
+        this.renderComplexityChart();
+      }
+    }, 150));
   }
 
   // ── Category & Algorithm Management ───────────────────────────────────
@@ -2683,6 +2709,7 @@ async def search(arr, target):
           }
           this.graphRenderer.render();
         }
+        this.highlightPseudocode('markPath', side);
         if (isA) {
           this.sounds.play("complete");
           this.saveSnapshot("markPath");
@@ -3148,8 +3175,9 @@ async def search(arr, target):
     if (!this.complexityDataB) this.complexityDataB = [];
     const canvas = this.complexityCanvas;
     const isRace = !!this.raceMode;
-    const baseW = isRace ? 340 : 300;
-    const baseH = 240;
+    const overlayW = this.complexityOverlay ? this.complexityOverlay.clientWidth : 300;
+    const baseW = Math.max(220, Math.min(isRace ? 340 : 300, overlayW || 300));
+    const baseH = Math.max(180, Math.min(240, Math.round(baseW * 0.75)));
 
     // HiDPI / devicePixelRatio scaling
     const dpr = window.devicePixelRatio || 1;
@@ -3509,22 +3537,22 @@ async def search(arr, target):
         ternary:       { compare: 5, found: 5, swap: 5 },
       },
       graph: {
-        _default:     { visitNode: 4, visitEdge: 5, compare: 4, swap: 4, found: 4 },
-        bfs:          { visitNode: 4, visitEdge: 5, compare: 4, swap: 4, found: 4 },
-        dfs:          { visitNode: 5, visitEdge: 6, compare: 5, swap: 5, found: 5 },
-        dijkstra:     { visitNode: 5, visitEdge: 6, compare: 7, swap: 5, found: 5 },
-        astar:        { visitNode: 4, visitEdge: 7, compare: 7, swap: 4, found: 5 },
-        bellman_ford: { visitNode: 3, visitEdge: 3, compare: 4, swap: 4, found: 4 },
-        prim:         { visitNode: 6, visitEdge: 7, compare: 4, swap: 4, found: 4 },
-        kruskal:      { visitNode: 4, visitEdge: 5, compare: 3, swap: 3, found: 3 },
-        toposort:     { visitNode: 5, visitEdge: 6, compare: 5, swap: 5, found: 5 },
+        _default:     { visitNode: 4, visitEdge: 5, markPath: 4, updateDistance: 5, compare: 4, swap: 4, found: 4 },
+        bfs:          { visitNode: 4, visitEdge: 5, markPath: 4, updateDistance: 5, compare: 4, swap: 4, found: 4 },
+        dfs:          { visitNode: 5, visitEdge: 6, markPath: 5, updateDistance: 5, compare: 5, swap: 5, found: 5 },
+        dijkstra:     { visitNode: 5, visitEdge: 6, markPath: 9, updateDistance: 8, compare: 7, swap: 5, found: 5 },
+        astar:        { visitNode: 4, visitEdge: 7, markPath: 5, updateDistance: 10, compare: 7, swap: 4, found: 5 },
+        bellman_ford: { visitNode: 3, visitEdge: 3, markPath: 5, updateDistance: 5, compare: 4, swap: 4, found: 4 },
+        prim:         { visitNode: 6, visitEdge: 4, markPath: 6, updateDistance: 6, compare: 4, swap: 4, found: 4 },
+        kruskal:      { visitNode: 4, visitEdge: 3, markPath: 6, updateDistance: 5, compare: 3, swap: 3, found: 3 },
+        toposort:     { visitNode: 5, visitEdge: 6, markPath: 5, updateDistance: 7, compare: 5, swap: 5, found: 5 },
       },
       grid: {
-        _default: { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
-        bfs:      { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
-        dfs:      { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
-        dijkstra: { visitGridCell: 3, compare: 3, swap: 3, found: 4 },
-        astar:    { visitGridCell: 4, compare: 4, swap: 4, found: 5 },
+        _default: { visitGridCell: 3, markPath: 3, compare: 3, swap: 3, found: 4 },
+        bfs:      { visitGridCell: 3, markPath: 3, compare: 3, swap: 3, found: 4 },
+        dfs:      { visitGridCell: 4, markPath: 3, compare: 3, swap: 3, found: 4 },
+        dijkstra: { visitGridCell: 3, markPath: 3, compare: 3, swap: 3, found: 4 },
+        astar:    { visitGridCell: 4, markPath: 4, compare: 4, swap: 4, found: 5 },
       }
     };
     const catMap  = map[cat]  || map.sort;
@@ -3643,7 +3671,7 @@ async def search(arr, target):
   /** Pop one snapshot from future (redo). Aborts live run if active. */
   stepForward() {
     if (this.future.length === 0) {
-      this.showToast("[INFO] No redo steps available.");
+      this.showToast("No redo steps available.");
       return;
     }
     if (this.isRunning) {
@@ -3655,9 +3683,8 @@ async def search(arr, target):
     this.isRunning = false;
     this.elements.runBtn.style.display = "inline-block";
 
-    const current = this._captureSnapshot('pre-redo');
     const next = this.future.pop();
-    this.history.push(current);
+    this.history.push(next);
     this._applySnapshot(next);
 
     this.updateStepNavButtons();

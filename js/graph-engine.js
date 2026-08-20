@@ -152,7 +152,7 @@ class GraphEngine {
     // ---- Binary Tree preset: recursive split placement ----
     if (presetType === "tree") {
       // Randomize depth each generation: 2, 3, or 4 levels (weighted towards 3)
-      const levelWeights = [2, 3, 3, 4];
+      const levelWeights = [2, 3, 3, 4, 4];
       const maxLevel = levelWeights[Math.floor(Math.random() * levelWeights.length)];
 
       // Vertical spacing scales with depth so deeper trees still fit
@@ -202,35 +202,66 @@ class GraphEngine {
       return;
     }
 
-    // ---- Directed Acyclic Graph preset: 2-source → 2-middle → sink layout ----
+    // ---- Directed Acyclic Graph preset: layered layout with randomized weights ----
     if (presetType === "dag") {
       this.setDirected(true);
-      const positions = [
-        { x: 60,  y: 160 },   // 0 A (source)
-        { x: 180, y: 80  },   // 1 B
-        { x: 180, y: 240 },   // 2 C
-        { x: 340, y: 80  },   // 3 D
-        { x: 340, y: 240 },   // 4 E
-        { x: 480, y: 160 }    // 5 F (sink)
+
+      // Pick one of 3 DAG layout templates for variety
+      const layouts = [
+        // Layout A: 2-source → 2-middle → sink (original)
+        [
+          { x: 60,  y: 160 },   // 0 A (source)
+          { x: 180, y: 80  },   // 1 B
+          { x: 180, y: 240 },   // 2 C
+          { x: 340, y: 80  },   // 3 D
+          { x: 340, y: 240 },   // 4 E
+          { x: 480, y: 160 }    // 5 F (sink)
+        ],
+        // Layout B: diamond shape
+        [
+          { x: 80,  y: 160 },
+          { x: 240, y: 80  },
+          { x: 240, y: 240 },
+          { x: 380, y: 160 },
+          { x: 500, y: 80  },
+          { x: 500, y: 240 }
+        ],
+        // Layout C: wider pipeline
+        [
+          { x: 50,  y: 160 },
+          { x: 160, y: 90  },
+          { x: 160, y: 230 },
+          { x: 300, y: 60  },
+          { x: 300, y: 160 },
+          { x: 300, y: 260 }
+        ]
       ];
+      const edgeSets = [
+        // Edges for layout A
+        [[0,1],[0,2],[1,3],[1,4],[2,4],[3,5],[4,5]],
+        // Edges for layout B
+        [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5]],
+        // Edges for layout C
+        [[0,1],[0,2],[1,3],[1,4],[2,4],[2,5]]
+      ];
+      const variant = Math.floor(Math.random() * layouts.length);
+      const positions = layouts[variant];
+      const edges = edgeSets[variant];
+
       positions.forEach((pos, idx) => this.addNode(pos.x, pos.y, String.fromCharCode(65 + idx)));
-      this.addEdge(0, 1, 3);
-      this.addEdge(0, 2, 2);
-      this.addEdge(1, 3, 4);
-      this.addEdge(1, 4, 1);
-      this.addEdge(2, 4, 5);
-      this.addEdge(3, 5, 2);
-      this.addEdge(4, 5, 3);
+      edges.forEach(([s, t]) => this.addEdge(s, t, Math.floor(Math.random() * 8) + 1));
       this.startNodeId = 0;
-      this.targetNodeId = 5;
+      this.targetNodeId = positions.length - 1;
       this.resetGraphState();
       return;
     }
 
-    // ---- Bellman-Ford preset: contains intentional negative-weight edges ----
+    // ---- Bellman-Ford preset: directed graph with intentional negative-weight edges ----
     if (presetType === "negative") {
       this.setDirected(true);
-      const pos = [
+      // Randomize positions slightly each run (shifts within a range)
+      const jitter = () => Math.floor(Math.random() * 30) - 15;
+      const basePos = [
         { x: 80,  y: 160 },
         { x: 220, y: 70  },
         { x: 220, y: 250 },
@@ -238,15 +269,19 @@ class GraphEngine {
         { x: 380, y: 250 },
         { x: 520, y: 160 }
       ];
-      pos.forEach((p, idx) => this.addNode(p.x, p.y, `N${idx}`));
-      this.addEdge(0, 1, 5);
-      this.addEdge(0, 2, 2);
-      this.addEdge(1, 3, 1);
-      this.addEdge(2, 1, -3);   // Negative weight (key Bellman-Ford test)
-      this.addEdge(2, 4, 4);
-      this.addEdge(3, 5, 3);
-      this.addEdge(4, 3, -1);   // Another negative weight
-      this.addEdge(4, 5, 7);
+      basePos.forEach((p, idx) => this.addNode(
+        p.x + jitter(), p.y + jitter(), `N${idx}`
+      ));
+      // Positive edges: randomized weights
+      this.addEdge(0, 1, Math.floor(Math.random() * 6) + 3);  // 3–8
+      this.addEdge(0, 2, Math.floor(Math.random() * 4) + 1);  // 1–4
+      this.addEdge(1, 3, Math.floor(Math.random() * 3) + 1);  // 1–3
+      // Negative edges (key Bellman-Ford test) — randomized negative values
+      this.addEdge(2, 1, -(Math.floor(Math.random() * 4) + 2));  // -2 to -5
+      this.addEdge(2, 4, Math.floor(Math.random() * 5) + 2);     // 2–6
+      this.addEdge(3, 5, Math.floor(Math.random() * 4) + 2);     // 2–5
+      this.addEdge(4, 3, -(Math.floor(Math.random() * 3) + 1));  // -1 to -3
+      this.addEdge(4, 5, Math.floor(Math.random() * 6) + 4);     // 4–9
       this.startNodeId = 0;
       this.targetNodeId = 5;
       this.resetGraphState();

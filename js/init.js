@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 500ms is conservative but ensures no race with browser layout.
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    console.log("[OK] AlgoDisplay initialized successfully!");
+    console.log("[OK] AlgoStudio initialized successfully!");
 
   } catch (error) {
     console.error("[ERR] Failed to initialize application:", error);
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.innerHTML = `
         <div style="color: red; text-align: center; padding: 20px;">
           <h3>Initialization Error</h3>
-          <p>Failed to initialize AlgoDisplay.</p>
+          <p>Failed to initialize AlgoStudio.</p>
           <p>Please refresh the page and try again.</p>
           <details style="margin-top: 10px;">
             <summary>Error Details</summary>

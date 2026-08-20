@@ -84,7 +84,7 @@ window.utils = {
   },
 
   /**
-   * Feature-detect modern browser APIs that AlgoDisplay uses.
+   * Feature-detect modern browser APIs that AlgoStudio uses.
    * Called once on startup to warn users on older browsers.
    *
    * @returns {{ supported: boolean, unsupported: string[], features: object }}
