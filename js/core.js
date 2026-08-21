@@ -2094,10 +2094,10 @@ async def search(arr, target):
 
   // Pause the currently running algorithm
   pauseExecution() {
-    console.log("PAUSE EXECUTION CALLED - isRunning:", this.isRunning, "isPaused:", this.isPaused);
     this.isPaused = true;
     this.elements.pauseBtn.style.display = "none";
     this.elements.resumeBtn.style.display = "inline-block";
+    this.elements.runBtn.style.display = "inline-block";
     this.log("Execution paused");
   }
 
@@ -2105,6 +2105,7 @@ async def search(arr, target):
   resumeExecution() {
     this.isPaused = false;
     this.elements.resumeBtn.style.display = "none";
+    this.elements.runBtn.style.display = "none";
     this.elements.pauseBtn.style.display = "inline-block";
     this.log("Execution resumed");
   }
@@ -2167,14 +2168,32 @@ async def search(arr, target):
   async runVisualization() {
     console.log("=== RUN VISUALIZATION START ===");
 
+    // ── If already running and paused, continue where we left off
+    if (this.isRunning && this.isPaused) {
+      if (this.future.length > 0) {
+        this.elements.runBtn.style.display = "none";
+        this.elements.pauseBtn.style.display = "inline-block";
+        this.elements.resumeBtn.style.display = "none";
+        while (this.future.length > 0 && !this.shouldStop && this.isPaused) {
+          const next = this.future.pop();
+          this.history.push(next);
+          this._applySnapshot(next);
+          this.updateStepNavButtons();
+          await new Promise(r => setTimeout(r, Math.max(20, Math.floor(this.speed / 1.8))));
+        }
+      }
+      if (!this.shouldStop) {
+        this.resumeExecution();
+      }
+      return;
+    }
+
     if (this.isRunning) {
       console.log("Already running, ignoring...");
       return;
     }
 
-    // ── Step-back continuation: if we undid some steps (future stack has entries)
-    //    then clicking "Run" = replay snapshots forward at current speed first.
-    //    This "picks up exactly where it left off" instead of restarting from 0.
+    // ── Replay snapshots forward if future has entries (for completed runs)
     if (this.future.length > 0) {
       this.isRunning = true;
       this.isPaused = false;
@@ -2187,32 +2206,19 @@ async def search(arr, target):
       this.log(`Resuming from snapshot - replaying ${totalToReplay} operation(s) forward...`);
       let played = 0;
       try {
-        while (this.future.length > 0 && !this.shouldStop) {
+        while (this.future.length > 0 && !this.shouldStop && !this.isPaused) {
           const next = this.future.pop();
-          const currentSnap = this._captureSnapshot('pre-replay');
-          this.history.push(currentSnap);
+          this.history.push(next);
           this._applySnapshot(next);
           this.updateStepNavButtons();
           played++;
-          await this.sleep(Math.max(20, Math.floor(this.speed / 1.8)));
+          await new Promise(r => setTimeout(r, Math.max(20, Math.floor(this.speed / 1.8))));
         }
       } finally {
         this.isRunning = false;
-        if (this.isPaused && !this.shouldStop && this.future.length > 0) {
-          this.elements.pauseBtn.style.display = "none";
-          this.elements.resumeBtn.style.display = "inline-block";
-          this.elements.runBtn.style.display = "inline-block";
-        } else {
-          this.elements.pauseBtn.style.display = "none";
-          this.elements.resumeBtn.style.display = "none";
-          this.elements.runBtn.style.display = "inline-block";
-        }
-      }
-      if (!this.shouldStop) {
-        this.log(`Replayed ${played} step(s) - now exactly where you left off.`);
-        // If future exhausted itself AND user wants more, clicking Run again does a fresh algorithm run.
-      } else {
-        this.log(`Replay paused at ${played}/${totalToReplay}.`);
+        this.elements.pauseBtn.style.display = "none";
+        this.elements.resumeBtn.style.display = "none";
+        this.elements.runBtn.style.display = "inline-block";
       }
       return;
     }
@@ -3639,7 +3645,7 @@ async def search(arr, target):
     }
   }
 
-  /** Pop one snapshot from history (undo). Aborts live run if active. */
+  /** Pop one snapshot from history (undo). Pauses live run if active. */
   stepBack() {
     if (this.history.length <= 1) {
       this.showToast("At starting state - cannot step back further.");
@@ -3647,14 +3653,11 @@ async def search(arr, target):
     }
 
     if (this.isRunning) {
-      this.shouldStop = true;
       this.isPaused = true;
-      this._generation += 1;
       this.elements.pauseBtn.style.display = "none";
-      this.elements.resumeBtn.style.display = this.stepMode ? "none" : "inline-block";
+      this.elements.resumeBtn.style.display = "inline-block";
+      this.elements.runBtn.style.display = "inline-block";
     }
-    this.isRunning = false;
-    this.elements.runBtn.style.display = "inline-block";
 
     const current = this.history.pop();
     if (current) {
@@ -3668,20 +3671,18 @@ async def search(arr, target):
     this.log("Stepped back one operation");
   }
 
-  /** Pop one snapshot from future (redo). Aborts live run if active. */
+  /** Pop one snapshot from future (redo). */
   stepForward() {
     if (this.future.length === 0) {
       this.showToast("No redo steps available.");
       return;
     }
     if (this.isRunning) {
-      this.shouldStop = true;
       this.isPaused = true;
-      this._generation += 1;
       this.elements.pauseBtn.style.display = "none";
+      this.elements.resumeBtn.style.display = "inline-block";
+      this.elements.runBtn.style.display = "inline-block";
     }
-    this.isRunning = false;
-    this.elements.runBtn.style.display = "inline-block";
 
     const next = this.future.pop();
     this.history.push(next);
